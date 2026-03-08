@@ -1,0 +1,112 @@
+[
+  {
+    "event_id": "9742ce6e-282a-4827-a10d-34c1182ec51f",
+    "run_id": "5b8eef8e-0da8-472e-baba-99c230f121d3",
+    "timestamp": "2026-03-08T02:19:31.310624+00:00",
+    "event_type": "pipeline_started",
+    "agent_name": null,
+    "progress": 0,
+    "data": null,
+    "message": "Pipeline execution started"
+  },
+  {
+    "event_id": "ced9cef7-0b1f-4330-8499-e64e9ae4c995",
+    "run_id": "5b8eef8e-0da8-472e-baba-99c230f121d3",
+    "timestamp": "2026-03-08T02:19:32.818184+00:00",
+    "event_type": "agent_started",
+    "agent_name": "IngestionAgent",
+    "progress": 5,
+    "data": null,
+    "message": "Parsing financial records\u2026"
+  },
+  {
+    "event_id": "0dc58b12-8192-4389-8b64-97bb4dd9d66d",
+    "run_id": "5b8eef8e-0da8-472e-baba-99c230f121d3",
+    "timestamp": "2026-03-08T02:19:33.854507+00:00",
+    "event_type": "agent_completed",
+    "agent_name": "IngestionAgent",
+    "progress": 20,
+    "data": {
+      "row_count": 3416
+    },
+    "message": "Parsed 3416 financial records"
+  },
+  {
+    "event_id": "c39019a8-0f4c-4e10-a194-b1ef4b44df6c",
+    "run_id": "5b8eef8e-0da8-472e-baba-99c230f121d3",
+    "timestamp": "2026-03-08T02:19:34.870172+00:00",
+    "event_type": "agent_started",
+    "agent_name": "PersistAgent",
+    "progress": 22,
+    "data": null,
+    "message": "Saving validated rows to database\u2026"
+  },
+  {
+    "event_id": "ea7430ac-08ab-4333-b07f-067bea36f3a8",
+    "run_id": "5b8eef8e-0da8-472e-baba-99c230f121d3",
+    "timestamp": "2026-03-08T02:19:36.062534+00:00",
+    "event_type": "agent_completed",
+    "agent_name": "PersistAgent",
+    "progress": 30,
+    "data": {
+      "persisted_count": 3416
+    },
+    "message": "Persisted 3416 rows"
+  },
+  {
+    "event_id": "bad27b5a-5f97-4de1-8274-2485429552e5",
+    "run_id": "5b8eef8e-0da8-472e-baba-99c230f121d3",
+    "timestamp": "2026-03-08T02:19:37.566041+00:00",
+    "event_type": "agent_started",
+    "agent_name": "AnalysisAgent",
+    "progress": 32,
+    "data": null,
+    "message": "Computing KPIs, IsolationForest anomalies, Monte Carlo simulations\u2026"
+  },
+  {
+    "event_id": "6d570300-cc2a-4347-8567-2d466e9c4386",
+    "run_id": "5b8eef8e-0da8-472e-baba-99c230f121d3",
+    "timestamp": "2026-03-08T02:19:39.201482+00:00",
+    "event_type": "agent_started",
+    "agent_name": "AnalysisAgent",
+    "progress": 50,
+    "data": null,
+    "message": "Isolating financial anomalies\u2026"
+  },
+  {
+    "event_id": "efd8e805-0c25-425b-b046-11c0d1eed02d",
+    "run_id": "5b8eef8e-0da8-472e-baba-99c230f121d3",
+    "timestamp": "2026-03-08T02:19:40.203488+00:00",
+    "event_type": "agent_completed",
+    "agent_name": "AnalysisAgent",
+    "progress": 75,
+    "data": {
+      "mrr": 21764.97,
+      "gross_margin": 0.7361,
+      "anomaly_count": 28
+    },
+    "message": "KPIs computed \u2014 MRR $21,765, 28 anomalies detected"
+  },
+  {
+    "event_id": "ce10ee47-3769-4856-9ab3-429b6390334e",
+    "run_id": "5b8eef8e-0da8-472e-baba-99c230f121d3",
+    "timestamp": "2026-03-08T02:19:41.207768+00:00",
+    "event_type": "agent_started",
+    "agent_name": "MarketAgent",
+    "progress": 77,
+    "data": null,
+    "message": "Scanning competitor signals\u2026"
+  },
+  {
+    "event_id": "a0f353fc-fe31-4ab8-854b-d3e8aef7f045",
+    "run_id": "5b8eef8e-0da8-472e-baba-99c230f121d3",
+    "timestamp": "2026-03-08T02:19:45.663782+00:00",
+    "event_type": "agent_completed",
+    "agent_name": "MarketAgent",
+    "progress": 95,
+    "data": {
+      "signal_count": 42
+    },
+    "message": "Market scan complete \u2014 42 competitor signals"
+  }
+]
