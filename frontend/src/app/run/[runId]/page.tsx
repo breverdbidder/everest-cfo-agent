@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMouse } from "@/hooks/use-mouse";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -8,40 +8,49 @@ import {
   Skull, Target, Send, MessageCircle, Calculator,
   ShieldCheck, CheckCircle2, XCircle, AlertTriangle, BarChart3, Bot,
 } from "lucide-react";
-import { RevenueAreaChart }              from "@/components/charts/revenue-area";
-import { SurvivalRadialChart }           from "@/components/charts/survival-radial";
+import { RevenueAreaChart } from "@/components/charts/revenue-area";
+import { SurvivalRadialChart } from "@/components/charts/survival-radial";
 import { ScenarioBarsChart, ScenarioCards } from "@/components/charts/scenario-bars";
-import { RuinProbabilityChart }          from "@/components/charts/ruin-probability";
-import { GrossMarginChart }              from "@/components/charts/gross-margin";
-import { ChurnTrendChart }               from "@/components/charts/churn-trend";
-import { MonteCarloFan }                 from "@/components/charts/monte-carlo-fan";
-import { AnomalyMLPanel }               from "@/components/anomaly-ml-panel";
-import { MarketIntelligence }            from "@/components/market-intelligence";
-import { RunwayExplorer }                from "@/components/runway-explorer";
-import { DashboardNav }                 from "@/components/dashboard-nav";
-import { BoardPrep }                     from "@/components/board-prep";
-import { CFOReport }                     from "@/components/cfo-report";
-import { VCMemo }                        from "@/components/vc-memo";
-import { InvestorUpdate }               from "@/components/investor-update";
-import { CashFlowSection }               from "@/components/cash-flow-section";
-import { DeferredRevenueCard }           from "@/components/deferred-revenue-card";
-import { IntegrationsBar }               from "@/components/integrations-bar";
-import { IntegrationsModal }             from "@/components/integrations-modal";
-import { BoardDeckDownload }             from "@/components/board-deck-download";
-import { KPIDeepDive }                  from "@/components/kpi-deep-dive";
-import { FraudAlertPanel }              from "@/components/fraud-alert-panel";
-import { CustomerMatrix }               from "@/components/customer-matrix";
-import { IndustryBenchmarker }          from "@/components/industry-benchmarker";
-import { MorningBriefing }             from "@/components/morning-briefing";
-import { AutonomousAgentSection }       from "@/components/autonomous-agent-section";
-import { HealthScoreCard }              from "@/components/health-score-card";
+import { RuinProbabilityChart } from "@/components/charts/ruin-probability";
+import { GrossMarginChart } from "@/components/charts/gross-margin";
+import { ChurnTrendChart } from "@/components/charts/churn-trend";
+import { MonteCarloFan } from "@/components/charts/monte-carlo-fan";
+import { AnomalyMLPanel } from "@/components/anomaly-ml-panel";
+import { MarketIntelligence } from "@/components/market-intelligence";
+import { RunwayClock } from "@/components/runway-clock";
+import { DashboardNav } from "@/components/dashboard-nav";
+import { BoardPrep } from "@/components/board-prep";
+import { CFOReport } from "@/components/cfo-report";
+import { VCMemo } from "@/components/vc-memo";
+import { InvestorUpdate } from "@/components/investor-update";
+import { CashFlowSection } from "@/components/cash-flow-section";
+import { DeferredRevenueCard } from "@/components/deferred-revenue-card";
+import { IntegrationsBar } from "@/components/integrations-bar";
+import { IntegrationsModal } from "@/components/integrations-modal";
+import { BoardDeckDownload } from "@/components/board-deck-download";
+import { KPIDeepDive } from "@/components/kpi-deep-dive";
+import { FraudAlertPanel } from "@/components/fraud-alert-panel";
+import { CustomerMatrix } from "@/components/customer-matrix";
+import { IndustryBenchmarker } from "@/components/industry-benchmarker";
+import { MorningBriefing } from "@/components/morning-briefing";
+import { AutonomousAgentSection } from "@/components/autonomous-agent-section";
+import { HealthScoreCard } from "@/components/health-score-card";
+import { DecisionEngine } from "@/components/decision-engine";
+import { PipelineView, type StepId } from "@/components/pipeline-view";
 import {
   getKPISeries, getAnomalies, getSignals,
   getBoardPrep, getReport, getVCMemo, getInvestorUpdate,
+  getAnalysisSummary,
   getFraudAlerts, getCustomerProfiles,
   getPreMortem, sendBoardChatMessage, getBenchmarks, getMorningBriefing,
 } from "@/lib/api";
 import { fmtK, fmtPct } from "@/lib/utils";
+import { usePipelineStream } from "@/hooks/usePipelineStream";
+import {
+  applyScenarioSimulation,
+  applySnapshotSimulation,
+  type DecisionSimulation,
+} from "@/lib/decision-simulator";
 import type {
   AnalyzeResponse, KPISnapshot, Anomaly, MarketSignal,
   SurvivalAnalysis, ScenarioResult, BoardQuestion, ReportData, VCMemoData, InvestorUpdateData,
@@ -50,12 +59,12 @@ import type {
 
 function SectionHeading({ label, sub }: { label: string; sub?: string }) {
   return (
-    <div className="flex items-end gap-3 mb-4">
-      <div>
-        <h2 className="text-base font-semibold text-gray-900">{label}</h2>
+    <div className="mb-3 flex flex-col items-center gap-1 text-center sm:flex-row sm:items-end sm:gap-3 sm:text-left">
+      <div className="flex flex-col items-center sm:items-start">
+        <h2 className="text-lg font-semibold text-gray-900">{label}</h2>
         {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
       </div>
-      <div className="flex-1 border-t border-gray-100 mb-1" />
+      <div className="hidden flex-1 border-t border-gray-100 sm:block sm:mb-1" />
     </div>
   );
 }
@@ -70,8 +79,8 @@ interface KPICardProps {
   metricKey?: string; activeKPI?: string | null; onKPIClick?: (k: string) => void;
 }
 function KPICard({ label, value, wow, sub, valueColor, accent, metricKey, activeKPI, onKPIClick }: KPICardProps) {
-  const up       = wow !== undefined && wow > 0.0001;
-  const down     = wow !== undefined && wow < -0.0001;
+  const up = wow !== undefined && wow > 0.0001;
+  const down = wow !== undefined && wow < -0.0001;
   const isActive = metricKey && activeKPI === metricKey;
   return (
     <div
@@ -93,7 +102,7 @@ function KPICard({ label, value, wow, sub, valueColor, accent, metricKey, active
         <div className={`absolute inset-0 ${accent.bg} pointer-events-none`} />
       )}
 
-      <div className="relative p-4 flex flex-col gap-1 flex-1">
+      <div className="relative flex flex-1 flex-col items-center gap-1 p-4 text-center">
         <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 truncate">{label}</div>
         <div key={value} className={`text-2xl font-bold leading-none truncate mt-0.5 animate-number-pop ${valueColor ?? "text-gray-900"}`}>{value}</div>
         {wow !== undefined && (
@@ -115,63 +124,101 @@ function KPICard({ label, value, wow, sub, valueColor, accent, metricKey, active
 
 export default function RunPage() {
   const { runId } = useParams<{ runId: string }>();
-  const router    = useRouter();
-  const mainRef   = useRef<HTMLDivElement>(null);
-  const mouse     = useMouse();
+  const router = useRouter();
+  const mainRef = useRef<HTMLDivElement>(null);
+  const mouse = useMouse();
   const [scrollPct, setScrollPct] = useState(0);
 
+  /* ── Real-time pipeline stream ────────────────────────────────── */
+  const stream = usePipelineStream(runId ?? null);
+  const [showLoadingOverlay, setShowLoadingOverlay] = useState(true);
+  const [completedIds, setCompletedIds] = useState<StepId[]>([]);
+  const [stepDetails, setStepDetails] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    // Map progress to completed Steps
+    const progress = stream.progress;
+    const ids = new Set<StepId>();
+    if (progress >= 20) ids.add("ingestion");
+    if (progress >= 50) ids.add("kpi");
+    if (progress >= 75) {
+      ids.add("anomalies");
+      ids.add("monte_carlo");
+      ids.add("scenarios");
+    }
+    if (progress >= 95) ids.add("market");
+    if (stream.completed) {
+      ids.add("market");
+      // Keep loading overlay for 1.5s after complete to see celebration
+      setTimeout(() => setShowLoadingOverlay(false), 1500);
+    }
+    setCompletedIds(Array.from(ids));
+  }, [stream.progress, stream.completed]);
+
   /* ── Core state ───────────────────────────────────────────────── */
-  const [snapshots,       setSnapshots]       = useState<KPISnapshot[]>([]);
-  const [anomalies,       setAnomalies]       = useState<Anomaly[]>([]);
-  const [signals,         setSignals]         = useState<MarketSignal[]>([]);
-  const [survival,        setSurvival]        = useState<SurvivalAnalysis | null>(null);
-  const [scenarios,       setScenarios]       = useState<ScenarioResult[]>([]);
-  const [companyName,     setCompanyName]     = useState("");
-  const [sector,          setSector]          = useState("saas_productivity");
-  const [fraudAlerts,     setFraudAlerts]     = useState<FraudAlert[]>([]);
+  const [snapshots, setSnapshots] = useState<KPISnapshot[]>([]);
+  const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
+  const [signals, setSignals] = useState<MarketSignal[]>([]);
+  const [survival, setSurvival] = useState<SurvivalAnalysis | null>(null);
+  const [scenarios, setScenarios] = useState<ScenarioResult[]>([]);
+  const [companyName, setCompanyName] = useState("");
+  const [sector, setSector] = useState("saas_productivity");
+  const [fraudAlerts, setFraudAlerts] = useState<FraudAlert[]>([]);
   const [customerProfiles, setCustomerProfiles] = useState<CustomerProfile[]>([]);
 
   /* ── AI generator state ───────────────────────────────────────── */
-  const [boardQs,     setBoardQs]     = useState<BoardQuestion[] | null>(null);
-  const [report,      setReport]      = useState<ReportData | null>(null);
-  const [vcMemo,         setVcMemo]         = useState<VCMemoData | null>(null);
+  const [boardQs, setBoardQs] = useState<BoardQuestion[] | null>(null);
+  const [report, setReport] = useState<ReportData | null>(null);
+  const [vcMemo, setVcMemo] = useState<VCMemoData | null>(null);
   const [investorUpdate, setInvestorUpdate] = useState<InvestorUpdateData | null>(null);
-  const [preMortem,      setPreMortem]      = useState<PreMortemScenario[] | null>(null);
+  const [preMortem, setPreMortem] = useState<PreMortemScenario[] | null>(null);
 
   /* ── Board chat state ─────────────────────────────────────────── */
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chatInput,    setChatInput]    = useState("");
-  const [chatLoading,  setChatLoading]  = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
 
   /* ── Cap table state ──────────────────────────────────────────── */
-  const [capPreMoney,      setCapPreMoney]      = useState(5_000_000);
-  const [capRaise,         setCapRaise]         = useState(2_000_000);
-  const [capShares,        setCapShares]        = useState(10_000_000);
-  const [capFounderPct,    setCapFounderPct]    = useState(60);
-  const [capEmployeePct,   setCapEmployeePct]   = useState(15);
+  const [capPreMoney, setCapPreMoney] = useState(5_000_000);
+  const [capRaise, setCapRaise] = useState(2_000_000);
+  const [capShares, setCapShares] = useState(10_000_000);
+  const [capFounderPct, setCapFounderPct] = useState(60);
+  const [capEmployeePct, setCapEmployeePct] = useState(15);
 
   /* ── Industry benchmarker state ───────────────────────────────── */
-  const [benchmarks,       setBenchmarks]       = useState<BenchmarkResult | null>(null);
+  const [benchmarks, setBenchmarks] = useState<BenchmarkResult | null>(null);
   const [benchmarksLoading, setBenchmarksLoading] = useState(false);
 
   /* ── Morning briefing state ────────────────────────────────────── */
-  const [briefing,         setBriefing]         = useState<MorningBriefingData | null>(null);
-  const [briefingLoading,  setBriefingLoading]  = useState(false);
+  const [briefing, setBriefing] = useState<MorningBriefingData | null>(null);
+  const [briefingLoading, setBriefingLoading] = useState(false);
 
   /* ── UI loading state ─────────────────────────────────────────── */
-  const [loading,               setLoading]               = useState(true);
-  const [boardLoading,          setBoardLoading]          = useState(false);
-  const [reportLoading,         setReportLoading]         = useState(false);
-  const [vcMemoLoading,         setVcMemoLoading]         = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [boardLoading, setBoardLoading] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [vcMemoLoading, setVcMemoLoading] = useState(false);
   const [investorUpdateLoading, setInvestorUpdateLoading] = useState(false);
-  const [preMortemLoading,      setPreMortemLoading]      = useState(false);
-  const [error,                 setError]                 = useState<string | null>(null);
+  const [preMortemLoading, setPreMortemLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (stream.events.length > 0) return;
+    if (!loading && snapshots.length > 0) {
+      const id = window.setTimeout(() => setShowLoadingOverlay(false), 250);
+      return () => window.clearTimeout(id);
+    }
+    if (!loading && error) {
+      setShowLoadingOverlay(false);
+    }
+  }, [error, loading, snapshots.length, stream.events.length]);
 
   /* ── Modal state ─────────────────────────────────────────────── */
   const [showIntegrationsModal, setShowIntegrationsModal] = useState(false);
 
   /* ── KPI deep-dive ────────────────────────────────────────────── */
   const [activeKPI, setActiveKPI] = useState<string | null>(null);
+  const [activeSimulation, setActiveSimulation] = useState<DecisionSimulation | null>(null);
 
   /* ── AI Intelligence Center active tool ─────────────────────── */
   const [activeAITool, setActiveAITool] = useState<string>("board_qa");
@@ -179,7 +226,7 @@ export default function RunPage() {
   /* ── Scroll progress bar ─────────────────────────────────────── */
   useEffect(() => {
     const onScroll = () => {
-      const el  = document.documentElement;
+      const el = document.documentElement;
       const pct = (el.scrollTop / (el.scrollHeight - el.clientHeight)) * 100;
       setScrollPct(isNaN(pct) ? 0 : pct);
     };
@@ -206,50 +253,89 @@ export default function RunPage() {
   }, [loading]);
 
   /* ── Data loading ─────────────────────────────────────────────── */
-  useEffect(() => {
+  const loadDashboardData = useCallback(async () => {
     if (!runId) return;
-    (async () => {
-      try {
-        const [kpis, anoms, sigs, frauds, customers] = await Promise.all([
-          getKPISeries(runId), getAnomalies(runId), getSignals(runId),
-          getFraudAlerts(runId), getCustomerProfiles(runId),
-        ]);
-        setSnapshots(kpis);
-        setAnomalies(anoms);
-        setSignals(sigs);
-        setFraudAlerts(frauds);
-        setCustomerProfiles(customers);
+    try {
+      const [kpis, anoms, sigs, frauds, customers, summary] = await Promise.all([
+        getKPISeries(runId), getAnomalies(runId), getSignals(runId),
+        getFraudAlerts(runId), getCustomerProfiles(runId),
+        getAnalysisSummary(runId).catch(() => null),
+      ]);
+      setSnapshots(kpis);
+      setAnomalies(anoms);
+      setSignals(sigs);
+      setFraudAlerts(frauds);
+      setCustomerProfiles(customers);
 
-        const cached = typeof window !== "undefined" ? sessionStorage.getItem(`run_${runId}`) : null;
-        if (cached) {
-          const parsed = JSON.parse(cached) as AnalyzeResponse;
-          if (parsed.survival_analysis) setSurvival(parsed.survival_analysis);
-          if (parsed.scenario_analysis) setScenarios(parsed.scenario_analysis ?? []);
-          if (parsed.company_name)      setCompanyName(parsed.company_name);
-          if (parsed.sector)            setSector(parsed.sector);
-        }
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load. Is the API running?");
-      } finally {
-        setLoading(false);
+      const cached = typeof window !== "undefined" ? sessionStorage.getItem(`run_${runId}`) : null;
+      const parsed = cached ? JSON.parse(cached) as AnalyzeResponse : null;
+
+      setSurvival(summary?.survival_analysis ?? parsed?.survival_analysis ?? null);
+      setScenarios(summary?.scenario_analysis ?? parsed?.scenario_analysis ?? []);
+
+      if (parsed) {
+        if (parsed.company_name) setCompanyName(parsed.company_name);
+        if (parsed.sector) setSector(parsed.sector);
       }
-    })();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load. Is the API running?");
+    } finally {
+      setLoading(false);
+    }
   }, [runId]);
 
+  // Initial load — may return empty results if pipeline is still running.
+  useEffect(() => { loadDashboardData(); }, [loadDashboardData]);
+
+  // Re-fetch full data once pipeline_completed fires via WebSocket/polling.
+  useEffect(() => {
+    if (stream.completed) loadDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stream.completed]);
+
+  // Extract survival / scenario data from the pipeline_completed WebSocket event
+  useEffect(() => {
+    if (!stream.completed) return;
+    const completedEvt = stream.events.find(e => e.event_type === "pipeline_completed");
+    if (!completedEvt?.data) return;
+    const d = completedEvt.data as Record<string, unknown>;
+    if (d.survival_analysis && !survival) {
+      setSurvival(d.survival_analysis as SurvivalAnalysis);
+    }
+    if (Array.isArray(d.scenario_analysis) && d.scenario_analysis.length > 0 && scenarios.length === 0) {
+      setScenarios(d.scenario_analysis as ScenarioResult[]);
+    }
+    if (d.company_name && !companyName) setCompanyName(d.company_name as string);
+    if (d.sector) setSector(d.sector as string);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stream.completed, stream.events]);
+
   /* ── Derived values ───────────────────────────────────────────── */
-  const latest        = snapshots[snapshots.length - 1];
-  const wow           = latest?.wow_delta ?? {};
+  const latest = snapshots[snapshots.length - 1];
+  const wow = latest?.wow_delta ?? {};
   const highAnomalies = anomalies.filter(a => a.severity === "HIGH").length;
+  const baseMonthsRunway =
+    scenarios.find(s => s.scenario === "base")?.months_runway
+    ?? (survival ? survival.expected_zero_cash_day / 30.44 : null);
+  const simulatedLatest = latest
+    ? applySnapshotSimulation(latest, activeSimulation)
+    : null;
+  const displayScenarios = activeSimulation
+    ? applyScenarioSimulation(scenarios, activeSimulation)
+    : scenarios;
+  const displayMonthsRunway = activeSimulation
+    ? activeSimulation.projectedRunwayMonths
+    : baseMonthsRunway;
 
   /* ── Handlers ─────────────────────────────────────────────────── */
   const handleBoardPrep = async () => {
     setBoardLoading(true);
-    try { setBoardQs((await getBoardPrep(runId)).questions); } catch {}
+    try { setBoardQs((await getBoardPrep(runId)).questions); } catch { }
     finally { setBoardLoading(false); }
   };
   const handleReport = async () => {
     setReportLoading(true);
-    try { setReport(await getReport(runId)); } catch {}
+    try { setReport(await getReport(runId)); } catch { }
     finally { setReportLoading(false); }
   };
   const handleVCMemo = async () => {
@@ -259,7 +345,7 @@ export default function RunPage() {
       const baseMonths = scenarios.find(s => s.scenario === "base")?.months_runway
         ?? (survival.expected_zero_cash_day / 30.44);
       setVcMemo(await getVCMemo(runId, baseMonths, survival.score, survival.probability_ruin_180d, companyName, sector));
-    } catch {}
+    } catch { }
     finally { setVcMemoLoading(false); }
   };
   const handleInvestorUpdate = async () => {
@@ -269,7 +355,7 @@ export default function RunPage() {
       const baseMonths = scenarios.find(s => s.scenario === "base")?.months_runway
         ?? (survival.expected_zero_cash_day / 30.44);
       setInvestorUpdate(await getInvestorUpdate(runId, baseMonths, survival.score, companyName, sector));
-    } catch {}
+    } catch { }
     finally { setInvestorUpdateLoading(false); }
   };
 
@@ -298,7 +384,7 @@ export default function RunPage() {
       const baseMonths = scenarios.find(s => s.scenario === "base")?.months_runway
         ?? (survival.expected_zero_cash_day / 30.44);
       setPreMortem(await getPreMortem(runId, baseMonths, companyName, sector));
-    } catch {}
+    } catch { }
     finally { setPreMortemLoading(false); }
   };
 
@@ -320,14 +406,14 @@ export default function RunPage() {
   };
 
   /* ── Cap table math ────────────────────────────────────────────── */
-  const capPostMoney    = capPreMoney + capRaise;
-  const newShares       = Math.round((capRaise / capPreMoney) * capShares);
-  const totalShares     = capShares + newShares;
+  const capPostMoney = capPreMoney + capRaise;
+  const newShares = Math.round((capRaise / capPreMoney) * capShares);
+  const totalShares = capShares + newShares;
   const investorPctPost = ((newShares / totalShares) * 100);
-  const founderPctPost  = (capFounderPct / 100) * (capShares / totalShares) * 100;
+  const founderPctPost = (capFounderPct / 100) * (capShares / totalShares) * 100;
   const employeePctPost = (capEmployeePct / 100) * (capShares / totalShares) * 100;
-  const prevInvPct      = (100 - capFounderPct - capEmployeePct);
-  const prevInvPctPost  = (prevInvPct / 100) * (capShares / totalShares) * 100;
+  const prevInvPct = (100 - capFounderPct - capEmployeePct);
+  const prevInvPctPost = (prevInvPct / 100) * (capShares / totalShares) * 100;
   const impliedSharePrice = capPreMoney / capShares;
 
   /* ── Fundraising readiness score ───────────────────────────────── */
@@ -344,7 +430,7 @@ export default function RunPage() {
     const ltvCacRatio = latest.cac > 0 ? latest.ltv / latest.cac : 0;
     const ltvCacScore = Math.min(100, Math.max(0, (ltvCacRatio / 3) * 100));
     const runwayScore = Math.min(100, Math.max(0, (baseMonths / 18) * 100));
-    const churnScore  = Math.min(100, Math.max(0, (1 - latest.churn_rate / 0.05) * 100));
+    const churnScore = Math.min(100, Math.max(0, (1 - latest.churn_rate / 0.05) * 100));
     const scores = [mrrGrowthMoScore, grossMarginScore, ltvCacScore, runwayScore, churnScore];
     const overall = scores.reduce((a, b) => a + b, 0) / scores.length;
     return {
@@ -364,12 +450,63 @@ export default function RunPage() {
       {/* ── Scroll progress bar ─────────────────────────────────────── */}
       <div className="scroll-progress" style={{ width: `${scrollPct}%` }} />
 
+      {/* ── Live pipeline progress banner (visible while pipeline is running) ── */}
+      {!stream.completed && stream.events.length > 0 && (
+        <div className="sticky top-[57px] z-40 border-b border-blue-100 bg-blue-50/95 backdrop-blur px-6 py-2.5">
+          <div className="max-w-5xl mx-auto space-y-1.5">
+            {/* Progress bar */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-500 rounded-full transition-all duration-700"
+                  style={{ width: `${stream.progress}%` }}
+                />
+              </div>
+              <span className="text-[11px] font-semibold text-blue-600 tabular-nums w-8 text-right">
+                {stream.progress}%
+              </span>
+            </div>
+            {/* Latest event message */}
+            {stream.events.at(-1) && (
+              <p className="text-[11px] text-blue-600 flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse flex-shrink-0" />
+                <span className="font-medium">[{stream.events.at(-1)!.agent_name ?? "System"}]</span>
+                {stream.events.at(-1)!.message}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Cursor glow (desktop only) ──────────────────────────────── */}
       <div className="cursor-glow hidden lg:block" style={{
         left: mouse.clientX,
-        top:  mouse.clientY,
+        top: mouse.clientY,
         opacity: mouse.clientX === 0 ? 0 : 0.7,
       }} />
+
+      {/* ── Dashboard Loading Overlay ──────────────────────────────── */}
+      {showLoadingOverlay && (
+        <div className="fixed inset-0 z-[100] bg-[#f5f5f7] flex flex-col items-center justify-center p-6 animate-fade-in-up">
+          <div className="w-full max-w-5xl">
+            <div className="mb-10 text-center">
+              <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-gray-900 mb-2">
+                {!stream.completed ? "Analyzing…" : "Complete ✓"}
+              </h2>
+              <p className="text-sm text-gray-400">
+                {!stream.completed
+                  ? "Five AI agents are processing your financials in real time"
+                  : "Loading dashboard…"}
+              </p>
+            </div>
+            <PipelineView
+              completedIds={completedIds}
+              stepDetails={stepDetails}
+              celebrating={stream.completed}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/90 backdrop-blur-md px-6 py-3 flex items-center justify-between gap-4">
@@ -425,9 +562,9 @@ export default function RunPage() {
       <DashboardNav
         latest={latest ?? null}
         survival={survival}
-        scenarios={scenarios}
+        scenarios={displayScenarios}
         monthsRunway={
-          scenarios.find(s => s.scenario === "base")?.months_runway
+          displayScenarios.find(s => s.scenario === "base")?.months_runway
           ?? (survival ? survival.expected_zero_cash_day / 30.44 : 0)
         }
         anomalyCount={anomalies.length}
@@ -438,7 +575,7 @@ export default function RunPage() {
       />
 
       {/* ── Content ────────────────────────────────────────────────── */}
-      <main ref={mainRef} className="mx-auto max-w-screen-xl px-4 sm:px-6 py-6 space-y-10">
+      <main ref={mainRef} className="mx-auto max-w-screen-xl px-4 sm:px-6 py-5 space-y-6 md:space-y-7">
 
         {error && (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600">{error}</div>
@@ -448,6 +585,25 @@ export default function RunPage() {
         {!loading && (
           <section id="sec-health" className="section-enter">
             <HealthScoreCard runId={runId as string} />
+          </section>
+        )}
+
+        {/* 0.5 · AI CFO DECISION ENGINE ─────────────────────────── */}
+        {!loading && latest && (
+          <section id="sec-decision" className="section-enter">
+            <DecisionEngine
+              runId={runId as string}
+              companyName={companyName}
+              latest={latest}
+              snapshots={snapshots}
+              anomalies={anomalies}
+              fraudAlerts={fraudAlerts}
+              signals={signals}
+              survival={survival}
+              scenarios={scenarios}
+              activeSimulationId={activeSimulation?.id ?? null}
+              onSelectSimulation={setActiveSimulation}
+            />
           </section>
         )}
 
@@ -508,10 +664,78 @@ export default function RunPage() {
           )}
         </section>
 
+        {/* LIVE PIPELINE AGENT LOG (shown while pipeline runs or if events exist) */}
+        {stream.events.length > 0 && (
+          <section className="section-enter">
+            <div className="flex items-end gap-3 mb-3">
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-md bg-gradient-to-br from-blue-600 to-indigo-600">
+                    <Zap className="h-3 w-3 text-white" />
+                  </div>
+                  <h2 className="text-base font-semibold text-gray-900">Pipeline Agent Log</h2>
+                  {!stream.completed && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-700 animate-pulse">
+                      <span className="h-1.5 w-1.5 rounded-full bg-blue-500 inline-block" />
+                      LIVE
+                    </span>
+                  )}
+                  {stream.completed && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 border border-green-200 px-2 py-0.5 text-[10px] font-bold text-green-700">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Complete
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">
+                  Real-time events from {stream.events.length} pipeline agents
+                  {stream.transport === "websocket" ? " via WebSocket" : stream.transport === "polling" ? " via polling" : ""}
+                  {stream.completed ? ` · finished in ${((new Date(stream.events.at(-1)!.timestamp).getTime() - new Date(stream.events[0].timestamp).getTime()) / 1000).toFixed(1)}s` : ""}
+                </p>
+              </div>
+              <div className="flex-1 border-t border-gray-100 mb-1" />
+            </div>
+            <div className="rounded-2xl border border-gray-200/80 bg-white shadow-sm overflow-hidden">
+              {/* Gradient top bar */}
+              <div className="h-0.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+              <div className="max-h-60 overflow-y-auto p-4 space-y-1.5 font-mono text-xs">
+                {stream.events.map((ev, i) => (
+                  <div key={ev.event_id} className={`flex gap-2.5 items-start py-0.5 ${i === stream.events.length - 1 && !stream.completed ? "animate-pulse" : ""
+                    }`}>
+                    {/* Status dot */}
+                    <span className={`h-2 w-2 rounded-full flex-shrink-0 mt-1 ${ev.event_type === "pipeline_completed" ? "bg-green-500" :
+                      ev.event_type === "pipeline_error" ? "bg-red-500" :
+                        ev.event_type === "agent_completed" ? "bg-blue-500" :
+                          ev.event_type === "agent_started" ? "bg-amber-400" :
+                            "bg-gray-300"
+                      }`} />
+                    <span className="text-gray-300 flex-shrink-0 tabular-nums">
+                      {new Date(ev.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                    </span>
+                    <span className={`flex-shrink-0 font-bold ${ev.event_type === "pipeline_completed" ? "text-green-600" :
+                      ev.event_type === "pipeline_error" ? "text-red-500" :
+                        ev.event_type === "agent_completed" ? "text-blue-600" :
+                          ev.event_type === "agent_started" ? "text-amber-600" :
+                            "text-gray-400"
+                      }`}>
+                      [{ev.agent_name ?? "Pipeline"}]
+                    </span>
+                    <span className="text-gray-600 flex-1">{ev.message}</span>
+                    <span className={`ml-auto flex-shrink-0 tabular-nums text-[10px] font-semibold ${ev.progress >= 100 ? "text-green-500" : ev.progress > 0 ? "text-blue-400" : "text-gray-200"
+                      }`}>
+                      {ev.progress > 0 ? `${ev.progress}%` : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* 2 · AUTONOMOUS CFO AGENT ──────────────────────────────── */}
         {!loading && (
           <section id="sec-agent" className="section-enter">
-            <div className="flex items-end gap-3 mb-4">
+            <div className="flex items-end gap-3 mb-3">
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
                   <div className="flex h-5 w-5 items-center justify-center rounded-md bg-purple-600">
@@ -536,15 +760,18 @@ export default function RunPage() {
         )}
 
         {/* 3 · RUNWAY EXPLORER ────────────────────────────────────── */}
-        {!loading && survival && (
+        {!loading && displayMonthsRunway !== null && simulatedLatest && (
           <section id="sec-runway" className="section-enter">
-            <RunwayExplorer
-              monthsRunway={
-                scenarios.find(s => s.scenario === "base")?.months_runway
-                ?? (survival.expected_zero_cash_day / 30.44)
-              }
-              latestBurn={latest?.burn_rate ?? 0}
-              latestMRR={latest?.mrr ?? 0}
+            <SectionHeading
+              label="Cash Runway"
+              sub={activeSimulation
+                ? `Simulating ${activeSimulation.title} · +${activeSimulation.runwayDeltaMonths.toFixed(1)} months modeled`
+                : "Live days remaining · burn and MRR sliders · estimated zero-cash date"}
+            />
+            <RunwayClock
+              monthsRunway={displayMonthsRunway}
+              latestBurn={simulatedLatest.burn_rate ?? 0}
+              latestMRR={simulatedLatest.mrr ?? 0}
             />
           </section>
         )}
@@ -553,9 +780,15 @@ export default function RunPage() {
         <section id="sec-forecast" className="section-enter">
           <SectionHeading
             label="13-Week Cash Position Forecast"
-            sub="P10 / P50 / P90 balance bands · Monte Carlo N=500 · committed outflows"
+            sub={activeSimulation
+              ? `Simulation active: ${activeSimulation.title} · cash curve updates locally without new API calls`
+              : "P10 / P50 / P90 balance bands · Monte Carlo N=500 · committed outflows"}
           />
-          <CashFlowSection runId={runId} />
+          <CashFlowSection
+            runId={runId as string}
+            refreshTrigger={stream.completed}
+            simulation={activeSimulation}
+          />
         </section>
 
         {/* 4 · REVENUE & SURVIVAL ─────────────────────────────────── */}
@@ -571,9 +804,18 @@ export default function RunPage() {
               {loading ? <Skel h="h-80" /> : survival
                 ? <SurvivalRadialChart survival={survival} />
                 : <div className="card-brutal flex flex-col items-center justify-center h-80 gap-3 text-center p-6">
-                    <div className="text-5xl font-bold text-gray-200">?</div>
-                    <p className="text-xs text-gray-400">Run via upload page to compute survival.</p>
-                  </div>}
+                  {!stream.completed ? (
+                    <>
+                      <Loader2 className="h-8 w-8 text-blue-400 animate-spin" />
+                      <p className="text-xs text-gray-400">Computing survival analysis…</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-5xl font-bold text-gray-200">?</div>
+                      <p className="text-xs text-gray-400">Monte Carlo survival data unavailable for this run.</p>
+                    </>
+                  )}
+                </div>}
             </div>
           </div>
         </section>
@@ -582,8 +824,10 @@ export default function RunPage() {
         {!loading && scenarios.length > 0 && latest && (
           <section className="section-enter">
             <SectionHeading label="Monte Carlo Revenue Simulation"
-              sub="150 stochastic paths · 18-month horizon · probability fan" />
-            <MonteCarloFan snapshots={snapshots} scenarios={scenarios} latestMRR={latest.mrr} />
+              sub={activeSimulation
+                ? `Now reflecting ${activeSimulation.title} in the simulation fan`
+                : "150 stochastic paths · 18-month horizon · probability fan"} />
+            <MonteCarloFan snapshots={snapshots} scenarios={displayScenarios} latestMRR={simulatedLatest?.mrr ?? latest.mrr} />
           </section>
         )}
 
@@ -597,12 +841,17 @@ export default function RunPage() {
         </section>
 
         {/* 7 · SCENARIO STRESS TEST ───────────────────────────────── */}
-        {!loading && scenarios.length > 0 && (
+        {!loading && displayScenarios.length > 0 && (
           <section id="sec-scenarios" className="section-enter">
-            <SectionHeading label="Scenario Stress Test" sub="Bear · Base · Bull runway forecasts · Series A readiness" />
+            <SectionHeading
+              label="Scenario Stress Test"
+              sub={activeSimulation
+                ? `Applied: ${activeSimulation.title} · every case re-forecasted instantly`
+                : "Bear · Base · Bull runway forecasts · Series A readiness"}
+            />
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 items-stretch">
-              <ScenarioBarsChart scenarios={scenarios} />
-              <ScenarioCards    scenarios={scenarios} />
+              <ScenarioBarsChart scenarios={displayScenarios} />
+              <ScenarioCards scenarios={displayScenarios} />
             </div>
           </section>
         )}
@@ -617,11 +866,17 @@ export default function RunPage() {
             ) : (
               <>
                 <GrossMarginChart snapshots={snapshots} />
-                <ChurnTrendChart  snapshots={snapshots} />
+                <ChurnTrendChart snapshots={snapshots} />
                 {survival
                   ? <RuinProbabilityChart survival={survival} />
-                  : <div className="card-brutal flex items-center justify-center h-full min-h-[250px] text-gray-400 text-sm">Ruin data unavailable</div>}
-                <DeferredRevenueCard runId={runId} />
+                  : <div className="card-brutal flex flex-col items-center justify-center h-full min-h-[250px] gap-2">
+                    {!stream.completed ? (
+                      <><Loader2 className="h-5 w-5 text-blue-400 animate-spin" /><span className="text-xs text-gray-400">Calculating…</span></>
+                    ) : (
+                      <><Skull className="h-5 w-5 text-gray-300" /><span className="text-xs text-gray-400">Ruin probability requires survival data</span></>
+                    )}
+                  </div>}
+                <DeferredRevenueCard runId={runId as string} refreshTrigger={stream.completed} />
               </>
             )}
           </div>
@@ -648,71 +903,6 @@ export default function RunPage() {
           {loading ? <Skel h="h-48" /> : <AnomalyMLPanel anomalies={anomalies} snapshotCount={snapshots.length} />}
         </section>
 
-        {/* 12 · FUNDRAISING READINESS ─────────────────────────────── */}
-        {!loading && fundraisingScore && (
-          <section id="sec-fundraising" className="section-enter">
-            <SectionHeading label="Fundraising Readiness"
-              sub="Series A predictor · 5 dimensions · rule-based scoring on your actual KPIs" />
-            <div className="card-brutal p-6">
-              <div className="flex flex-col md:flex-row gap-6 items-start">
-                {/* Verdict badge */}
-                <div className="flex-shrink-0 flex flex-col items-center gap-2">
-                  <div className={`rounded-2xl px-6 py-4 text-center min-w-[130px] ${
-                    fundraisingScore.verdict === "READY" ? "bg-green-100 border-2 border-green-300" :
-                    fundraisingScore.verdict === "6 MONTHS" ? "bg-amber-100 border-2 border-amber-300" :
-                    "bg-red-100 border-2 border-red-300"}`}>
-                    <Target className={`h-8 w-8 mx-auto mb-1 ${fundraisingScore.verdict === "READY" ? "text-green-600" : fundraisingScore.verdict === "6 MONTHS" ? "text-amber-600" : "text-red-600"}`} />
-                    <div className="text-2xl font-black text-gray-900">{fundraisingScore.overall}</div>
-                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">/100</div>
-                    <div className={`text-xs font-black mt-1 ${fundraisingScore.verdict === "READY" ? "text-green-700" : fundraisingScore.verdict === "6 MONTHS" ? "text-amber-700" : "text-red-700"}`}>
-                      {fundraisingScore.verdict}
-                    </div>
-                  </div>
-                  <div className="text-[10px] text-gray-400 text-center">Series A Readiness</div>
-                </div>
-
-                {/* 5-dimension bars */}
-                <div className="flex-1 space-y-3">
-                  {[
-                    { label: "MRR Growth (monthly)", score: fundraisingScore.mrrGrowth, benchmark: "15%+ MoM" },
-                    { label: "Gross Margin",          score: fundraisingScore.grossMargin, benchmark: "70%+ target" },
-                    { label: "LTV : CAC Ratio",       score: fundraisingScore.ltvCac, benchmark: "3x+ healthy" },
-                    { label: "Runway",                score: fundraisingScore.runway, benchmark: "18 months" },
-                    { label: "Churn Rate",            score: fundraisingScore.churn, benchmark: "<2%/wk" },
-                  ].map(({ label, score, benchmark }) => (
-                    <div key={label}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-semibold text-gray-700">{label}</span>
-                        <span className="text-[10px] text-gray-400">{benchmark}</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-700 ${score >= 75 ? "bg-green-500" : score >= 50 ? "bg-amber-400" : "bg-red-400"}`}
-                          style={{ width: `${score}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* 13 · MORNING CFO BRIEFING ──────────────────────────────── */}
-        {!loading && (
-          <section id="sec-briefing" className="section-enter">
-            <SectionHeading label="Morning CFO Briefing"
-              sub="Proactive AI · daily financial summary · urgent alerts + action items · ~$0.003" />
-            <MorningBriefing
-              runId={runId as string}
-              companyName={companyName || "Your Company"}
-              onGenerate={handleBriefing}
-              data={briefing}
-              loading={briefingLoading}
-            />
-          </section>
-        )}
 
         {/* 15 · AI INTELLIGENCE CENTER ─────────────────────────────── */}
         {!loading && (
@@ -726,16 +916,16 @@ export default function RunPage() {
               <div className="border-b border-gray-100 bg-gray-50/60 px-4 pt-3 pb-0">
                 <div className="flex gap-1 overflow-x-auto no-scrollbar">
                   {[
-                    { id: "board_qa",       icon: <Zap className="h-3.5 w-3.5" />,         title: "Board Q&A",      color: "text-blue-600",   active_bg: "bg-blue-600",   generated: !!boardQs,              loading: boardLoading },
-                    { id: "cfo_report",     icon: <FileText className="h-3.5 w-3.5" />,     title: "CFO Report",     color: "text-gray-600",   active_bg: "bg-gray-700",   generated: !!report,               loading: reportLoading },
-                    { id: "vc_verdict",     icon: <Scale className="h-3.5 w-3.5" />,        title: "VC Verdict",     color: "text-amber-600",  active_bg: "bg-amber-500",  generated: !!vcMemo,               loading: vcMemoLoading,         disabled: !survival },
-                    { id: "investor_update",icon: <Mail className="h-3.5 w-3.5" />,         title: "Investor Update",color: "text-blue-500",   active_bg: "bg-blue-500",   generated: !!investorUpdate,       loading: investorUpdateLoading, disabled: !survival },
-                    { id: "board_deck",     icon: <FileText className="h-3.5 w-3.5" />,     title: "Board Deck",     color: "text-purple-600", active_bg: "bg-purple-600", generated: false,                  loading: false },
-                    { id: "pre_mortem",     icon: <Skull className="h-3.5 w-3.5" />,        title: "Pre-mortem",     color: "text-red-600",    active_bg: "bg-red-600",    generated: !!preMortem,            loading: preMortemLoading,      disabled: !survival },
-                    { id: "board_chat",     icon: <MessageCircle className="h-3.5 w-3.5" />,title: "CFO Chat",       color: "text-indigo-600", active_bg: "bg-indigo-600", generated: chatMessages.length > 0,loading: chatLoading },
-                    { id: "cap_table",      icon: <Calculator className="h-3.5 w-3.5" />,   title: "Cap Table",      color: "text-teal-600",   active_bg: "bg-teal-600",   generated: false,                  loading: false },
-                    { id: "compliance",     icon: <ShieldCheck className="h-3.5 w-3.5" />,  title: "Compliance",     color: "text-green-600",  active_bg: "bg-green-600",  generated: false,                  loading: false },
-                    { id: "benchmarker",    icon: <BarChart3 className="h-3.5 w-3.5" />,    title: "Benchmarker",    color: "text-violet-600", active_bg: "bg-violet-600", generated: !!benchmarks,           loading: benchmarksLoading },
+                    { id: "board_qa", icon: <Zap className="h-3.5 w-3.5" />, title: "Board Q&A", color: "text-blue-600", active_bg: "bg-blue-600", generated: !!boardQs, loading: boardLoading },
+                    { id: "cfo_report", icon: <FileText className="h-3.5 w-3.5" />, title: "CFO Report", color: "text-gray-600", active_bg: "bg-gray-700", generated: !!report, loading: reportLoading },
+                    { id: "vc_verdict", icon: <Scale className="h-3.5 w-3.5" />, title: "VC Verdict", color: "text-amber-600", active_bg: "bg-amber-500", generated: !!vcMemo, loading: vcMemoLoading, disabled: !survival },
+                    { id: "investor_update", icon: <Mail className="h-3.5 w-3.5" />, title: "Investor Update", color: "text-blue-500", active_bg: "bg-blue-500", generated: !!investorUpdate, loading: investorUpdateLoading, disabled: !survival },
+                    { id: "board_deck", icon: <FileText className="h-3.5 w-3.5" />, title: "Board Deck", color: "text-purple-600", active_bg: "bg-purple-600", generated: false, loading: false },
+                    { id: "pre_mortem", icon: <Skull className="h-3.5 w-3.5" />, title: "Pre-mortem", color: "text-red-600", active_bg: "bg-red-600", generated: !!preMortem, loading: preMortemLoading, disabled: !survival },
+                    { id: "board_chat", icon: <MessageCircle className="h-3.5 w-3.5" />, title: "CFO Chat", color: "text-indigo-600", active_bg: "bg-indigo-600", generated: chatMessages.length > 0, loading: chatLoading },
+                    { id: "cap_table", icon: <Calculator className="h-3.5 w-3.5" />, title: "Cap Table", color: "text-teal-600", active_bg: "bg-teal-600", generated: false, loading: false },
+                    { id: "compliance", icon: <ShieldCheck className="h-3.5 w-3.5" />, title: "Compliance", color: "text-green-600", active_bg: "bg-green-600", generated: false, loading: false },
+                    { id: "benchmarker", icon: <BarChart3 className="h-3.5 w-3.5" />, title: "Benchmarker", color: "text-violet-600", active_bg: "bg-violet-600", generated: !!benchmarks, loading: benchmarksLoading },
                   ].map(tool => {
                     const isActive = activeAITool === tool.id;
                     return (
@@ -1108,12 +1298,12 @@ export default function RunPage() {
                           <p className="text-[11px] font-black text-gray-500 uppercase tracking-wider">Results</p>
                           {[
                             { label: "Post-money Valuation", value: `$${(capPostMoney / 1_000_000).toFixed(2)}M` },
-                            { label: "New Shares Issued",    value: newShares.toLocaleString() },
-                            { label: "Implied Share Price",  value: `$${impliedSharePrice.toFixed(4)}` },
-                            { label: "Investor % (post)",   value: `${investorPctPost.toFixed(1)}%`, highlight: true },
-                            { label: "Founder % (post)",    value: `${founderPctPost.toFixed(1)}%` },
-                            { label: "Employee Pool (post)",value: `${employeePctPost.toFixed(1)}%` },
-                            { label: "Prev Investors (post)",value: `${prevInvPctPost.toFixed(1)}%` },
+                            { label: "New Shares Issued", value: newShares.toLocaleString() },
+                            { label: "Implied Share Price", value: `$${impliedSharePrice.toFixed(4)}` },
+                            { label: "Investor % (post)", value: `${investorPctPost.toFixed(1)}%`, highlight: true },
+                            { label: "Founder % (post)", value: `${founderPctPost.toFixed(1)}%` },
+                            { label: "Employee Pool (post)", value: `${employeePctPost.toFixed(1)}%` },
+                            { label: "Prev Investors (post)", value: `${prevInvPctPost.toFixed(1)}%` },
                           ].map(({ label, value, highlight }) => (
                             <div key={label} className={`flex items-center justify-between rounded-lg px-3 py-2 ${highlight ? "bg-blue-50 border border-blue-100" : "bg-white border border-gray-100"}`}>
                               <span className="text-xs text-gray-600">{label}</span>
@@ -1133,10 +1323,10 @@ export default function RunPage() {
                         <p className="text-xs text-gray-400 mt-0.5">Auto-checked from your financial data · no manual input required</p>
                       </div>
                       {(() => {
-                        const highFrauds   = fraudAlerts.filter(f => f.severity === "HIGH").length;
-                        const roundNums    = fraudAlerts.filter(f => f.pattern === "round_number").length;
+                        const highFrauds = fraudAlerts.filter(f => f.severity === "HIGH").length;
+                        const roundNums = fraudAlerts.filter(f => f.pattern === "round_number").length;
                         const contractorRisk = fraudAlerts.some(f => f.pattern === "contractor_ratio");
-                        const hasGaps      = snapshots.length > 0 && snapshots.some((s, i) => {
+                        const hasGaps = snapshots.length > 0 && snapshots.some((s, i) => {
                           if (i === 0) return false;
                           const prev = new Date(snapshots[i - 1].week_start).getTime();
                           const curr = new Date(s.week_start).getTime();
@@ -1155,7 +1345,7 @@ export default function RunPage() {
                           <div className="space-y-2">
                             {items.map(({ label, status, note }) => {
                               const icon = status === "PASS" ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : status === "FAIL" ? <XCircle className="h-4 w-4 text-red-500" /> : <AlertTriangle className="h-4 w-4 text-amber-400" />;
-                              const cls  = status === "PASS" ? "border-green-100 bg-green-50" : status === "FAIL" ? "border-red-100 bg-red-50" : "border-amber-100 bg-amber-50";
+                              const cls = status === "PASS" ? "border-green-100 bg-green-50" : status === "FAIL" ? "border-red-100 bg-red-50" : "border-amber-100 bg-amber-50";
                               const badge = status === "PASS" ? "bg-green-100 text-green-700" : status === "FAIL" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700";
                               return (
                                 <div key={label} className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${cls}`}>
@@ -1217,9 +1407,75 @@ export default function RunPage() {
             </div>
           </section>
         )}
+
+
+        {/* 12 · FUNDRAISING READINESS ─────────────────────────────── */}
+        {!loading && fundraisingScore && (
+          <section id="sec-fundraising" className="section-enter">
+            <SectionHeading label="Fundraising Readiness"
+              sub="Series A predictor · 5 dimensions · rule-based scoring on your actual KPIs" />
+            <div className="card-brutal p-6">
+              <div className="flex flex-col md:flex-row gap-6 items-start">
+                {/* Verdict badge */}
+                <div className="flex-shrink-0 flex flex-col items-center gap-2">
+                  <div className={`rounded-2xl px-6 py-4 text-center min-w-[130px] ${fundraisingScore.verdict === "READY" ? "bg-green-100 border-2 border-green-300" :
+                    fundraisingScore.verdict === "6 MONTHS" ? "bg-amber-100 border-2 border-amber-300" :
+                      "bg-red-100 border-2 border-red-300"}`}>
+                    <Target className={`h-8 w-8 mx-auto mb-1 ${fundraisingScore.verdict === "READY" ? "text-green-600" : fundraisingScore.verdict === "6 MONTHS" ? "text-amber-600" : "text-red-600"}`} />
+                    <div className="text-2xl font-black text-gray-900">{fundraisingScore.overall}</div>
+                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">/100</div>
+                    <div className={`text-xs font-black mt-1 ${fundraisingScore.verdict === "READY" ? "text-green-700" : fundraisingScore.verdict === "6 MONTHS" ? "text-amber-700" : "text-red-700"}`}>
+                      {fundraisingScore.verdict}
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-gray-400 text-center">Series A Readiness</div>
+                </div>
+
+                {/* 5-dimension bars */}
+                <div className="flex-1 space-y-3">
+                  {[
+                    { label: "MRR Growth (monthly)", score: fundraisingScore.mrrGrowth, benchmark: "15%+ MoM" },
+                    { label: "Gross Margin", score: fundraisingScore.grossMargin, benchmark: "70%+ target" },
+                    { label: "LTV : CAC Ratio", score: fundraisingScore.ltvCac, benchmark: "3x+ healthy" },
+                    { label: "Runway", score: fundraisingScore.runway, benchmark: "18 months" },
+                    { label: "Churn Rate", score: fundraisingScore.churn, benchmark: "<2%/wk" },
+                  ].map(({ label, score, benchmark }) => (
+                    <div key={label}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-semibold text-gray-700">{label}</span>
+                        <span className="text-[10px] text-gray-400">{benchmark}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${score >= 75 ? "bg-green-500" : score >= 50 ? "bg-amber-400" : "bg-red-400"}`}
+                          style={{ width: `${score}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 13 · MORNING CFO BRIEFING ──────────────────────────────── */}
+        {!loading && (
+          <section id="sec-briefing" className="section-enter">
+            <SectionHeading label="Morning CFO Briefing"
+              sub="Proactive AI · daily financial summary · urgent alerts + action items · ~$0.003" />
+            <MorningBriefing
+              runId={runId as string}
+              companyName={companyName || "Your Company"}
+              onGenerate={handleBriefing}
+              data={briefing}
+              loading={briefingLoading}
+            />
+          </section>
+        )}
       </main>
 
-      <footer className="border-t border-gray-200 bg-white mt-16 px-6 py-5 text-center text-[11px] text-gray-400">
+      <footer className="border-t border-gray-200 bg-white mt-10 px-6 py-5 text-center text-[11px] text-gray-400">
         AI CFO Agent · {snapshots.length} weekly periods · {anomalies.length} anomalies · Claude Haiku · IsolationForest · Monte Carlo
       </footer>
     </div>

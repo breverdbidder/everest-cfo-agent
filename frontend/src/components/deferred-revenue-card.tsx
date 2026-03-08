@@ -8,9 +8,10 @@ import { fmtK } from "@/lib/utils";
 
 interface Props {
   runId: string;
+  refreshTrigger?: boolean;
 }
 
-export function DeferredRevenueCard({ runId }: Props) {
+export function DeferredRevenueCard({ runId, refreshTrigger }: Props) {
   const [data, setData] = useState<DeferredRevenueSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -24,9 +25,9 @@ export function DeferredRevenueCard({ runId }: Props) {
   useEffect(() => {
     getDeferredRevenue(runId)
       .then(setData)
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
-  }, [runId]);
+  }, [runId, refreshTrigger]);
 
   async function handleAdd() {
     if (!custId || !totalValue || !startDate || !endDate) return;
@@ -44,7 +45,7 @@ export function DeferredRevenueCard({ runId }: Props) {
       setShowForm(false);
       setCustId("");
       setTotalValue("");
-    } catch {}
+    } catch { }
     setSubmitting(false);
   }
 

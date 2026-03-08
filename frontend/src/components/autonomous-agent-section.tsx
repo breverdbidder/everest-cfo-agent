@@ -56,12 +56,12 @@ function StatusPill({ running, planType }: { running: boolean; planType: string 
 // ── Action status badge ───────────────────────────────────────────────────────
 function ActionBadge({ status }: { status: AgentActionItem["status"] }) {
   const map: Record<string, { color: string; label: string }> = {
-    executed:         { color: "bg-green-100 text-green-700", label: "Executed" },
+    executed: { color: "bg-green-100 text-green-700", label: "Executed" },
     pending_approval: { color: "bg-amber-100 text-amber-700", label: "Awaiting approval" },
-    approved:         { color: "bg-blue-100 text-blue-700", label: "Approved" },
-    rejected:         { color: "bg-gray-100 text-gray-500", label: "Rejected" },
-    failed:           { color: "bg-red-100 text-red-600", label: "Failed" },
-    skipped:          { color: "bg-gray-100 text-gray-400", label: "Skipped" },
+    approved: { color: "bg-blue-100 text-blue-700", label: "Approved" },
+    rejected: { color: "bg-gray-100 text-gray-500", label: "Rejected" },
+    failed: { color: "bg-red-100 text-red-600", label: "Failed" },
+    skipped: { color: "bg-gray-100 text-gray-400", label: "Skipped" },
   };
   const { color, label } = map[status] ?? map.skipped;
   return (
@@ -72,12 +72,12 @@ function ActionBadge({ status }: { status: AgentActionItem["status"] }) {
 // ── Action type label ─────────────────────────────────────────────────────────
 function actionLabel(type: string): string {
   const labels: Record<string, string> = {
-    log_alert:                "Alert logged",
-    send_slack_webhook:       "Slack notification",
-    send_email:               "Email sent",
-    generate_vc_memo:         "VC memo generated",
+    log_alert: "Alert logged",
+    send_slack_webhook: "Slack notification",
+    send_email: "Email sent",
+    generate_vc_memo: "VC memo generated",
     generate_investor_update: "Investor update generated",
-    create_approval:          "Approval requested",
+    create_approval: "Approval requested",
   };
   return labels[type] ?? type.replace(/_/g, " ");
 }
@@ -190,15 +190,18 @@ export function AutonomousAgentSection({ runId, companyName, sector }: Props) {
       {/* ── Left: Observation + Controls ─────────────────────────────────── */}
       <div className="col-span-1 space-y-4">
         {/* Header card */}
-        <div className="card-brutal p-5">
-          <div className="flex items-center justify-between mb-4">
+        <div className="card-brutal p-5 relative overflow-hidden bg-gradient-to-b from-gray-900 to-gray-800 border-gray-800 text-white shadow-xl tilt-card">
+          <div className="absolute -top-12 -right-12 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl" />
+          <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="flex items-center justify-between mb-4 relative z-10">
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center">
-                <Bot className="h-4 w-4 text-blue-600" />
+              <div className="h-8 w-8 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center backdrop-blur-sm">
+                <Bot className="h-4 w-4 text-blue-400" />
               </div>
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Autonomous CFO</div>
-                <div className="text-xs text-gray-500">AI agent monitoring 24/7</div>
+                <div className="text-xs text-gray-300">AI agent monitoring 24/7</div>
               </div>
             </div>
             <StatusPill running={running} planType={planType} />
@@ -206,38 +209,37 @@ export function AutonomousAgentSection({ runId, companyName, sector }: Props) {
 
           {/* Latest observation metrics */}
           {obs ? (
-            <div className="space-y-2.5 mb-4">
+            <div className="space-y-2.5 mb-4 relative z-10">
               <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-gray-50 border border-gray-100 p-2.5">
+                <div className="rounded-xl bg-gray-800/80 border border-gray-700/50 p-2.5 backdrop-blur-md">
                   <div className="text-[9px] text-gray-400 uppercase tracking-wide">Runway</div>
-                  <div className={`text-sm font-black tabular-nums ${
-                    obs.runway_months < 3 ? "text-red-500" :
-                    obs.runway_months < 6 ? "text-amber-500" : "text-green-600"
-                  }`}>
+                  <div className={`text-sm font-black tabular-nums ${obs.runway_months < 3 ? "text-red-400" :
+                      obs.runway_months < 6 ? "text-amber-400" : "text-green-400"
+                    }`}>
                     {obs.runway_months.toFixed(1)} mo
                   </div>
                 </div>
-                <div className="rounded-xl bg-gray-50 border border-gray-100 p-2.5">
+                <div className="rounded-xl bg-gray-800/80 border border-gray-700/50 p-2.5 backdrop-blur-md">
                   <div className="text-[9px] text-gray-400 uppercase tracking-wide">Burn</div>
-                  <div className="text-sm font-black tabular-nums text-gray-800">
+                  <div className="text-sm font-black tabular-nums text-white">
                     {fmtK(obs.burn_rate)}/wk
                   </div>
-                  <div className={`text-[9px] font-semibold ${obs.burn_change_pct > 0 ? "text-red-400" : "text-green-500"}`}>
+                  <div className={`text-[9px] font-semibold ${obs.burn_change_pct > 0 ? "text-red-400" : "text-green-400"}`}>
                     {obs.burn_change_pct > 0 ? "+" : ""}{obs.burn_change_pct.toFixed(1)}% WoW
                   </div>
                 </div>
-                <div className="rounded-xl bg-gray-50 border border-gray-100 p-2.5">
+                <div className="rounded-xl bg-gray-800/80 border border-gray-700/50 p-2.5 backdrop-blur-md">
                   <div className="text-[9px] text-gray-400 uppercase tracking-wide">MRR</div>
-                  <div className="text-sm font-black tabular-nums text-gray-800">
+                  <div className="text-sm font-black tabular-nums text-white">
                     {fmtK(obs.mrr)}/wk
                   </div>
-                  <div className={`text-[9px] font-semibold ${obs.mrr_change_pct >= 0 ? "text-green-500" : "text-red-400"}`}>
+                  <div className={`text-[9px] font-semibold ${obs.mrr_change_pct >= 0 ? "text-green-400" : "text-red-400"}`}>
                     {obs.mrr_change_pct >= 0 ? "+" : ""}{obs.mrr_change_pct.toFixed(1)}% WoW
                   </div>
                 </div>
-                <div className="rounded-xl bg-gray-50 border border-gray-100 p-2.5">
+                <div className="rounded-xl bg-gray-800/80 border border-gray-700/50 p-2.5 backdrop-blur-md">
                   <div className="text-[9px] text-gray-400 uppercase tracking-wide">Signals</div>
-                  <div className="text-sm font-black tabular-nums text-gray-800">
+                  <div className="text-sm font-black tabular-nums text-white">
                     {obs.active_anomalies_count} anomal
                   </div>
                   <div className="text-[9px] text-gray-400">
@@ -263,12 +265,12 @@ export function AutonomousAgentSection({ runId, companyName, sector }: Props) {
           <button
             onClick={handleRunCycle}
             disabled={running}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white hover:bg-blue-700 transition-colors disabled:opacity-60"
+            className="relative z-10 w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-xs font-black text-white hover:bg-blue-500 transition-all shadow-lg hover:shadow-blue-500/25 disabled:opacity-60 disabled:hover:bg-blue-600"
           >
             {running ? (
-              <><RefreshCw className="h-3 w-3 animate-spin" /> Agent is thinking...</>
+              <><RefreshCw className="h-4 w-4 animate-spin" /> Agent is thinking...</>
             ) : (
-              <><Zap className="h-3 w-3" /> Run Agent Cycle</>
+              <><Zap className="h-4 w-4 text-amber-300" /> Run Agent Cycle</>
             )}
           </button>
 
@@ -311,11 +313,13 @@ export function AutonomousAgentSection({ runId, companyName, sector }: Props) {
       </div>
 
       {/* ── Right: Action Feed ─────────────────────────────────────────────── */}
-      <div className="col-span-2 card-brutal p-5">
-        <div className="flex items-center justify-between mb-4">
+      <div className="col-span-2 card-brutal p-5 bg-white shadow-sm border-gray-200/80">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Action Feed</div>
-            <div className="text-xs text-gray-500 mt-0.5">Everything the agent has done</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 flex items-center gap-1">
+              <Zap className="h-3 w-3" /> Action Feed
+            </div>
+            <div className="text-xs font-semibold text-gray-500 mt-1">Everything the agent has done</div>
           </div>
           <button
             onClick={fetchStatus}

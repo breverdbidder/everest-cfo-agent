@@ -9,9 +9,10 @@ import {
   FileSpreadsheet, FileText, Info, Download,
 } from "lucide-react";
 import { UploadZone } from "@/components/upload-zone";
-import { PipelineView, PIPELINE_STEPS, type StepId } from "@/components/pipeline-view";
-import { runDemoSync, runAnalysisSync, getStripeAuthUrl, getQuickBooksAuthUrl } from "@/lib/api";
-import type { AnalyzeResponse } from "@/lib/types";
+import { PipelineView, type StepId } from "@/components/pipeline-view";
+import { getStripeAuthUrl, getQuickBooksAuthUrl } from "@/lib/api";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 const SECTORS = [
   { id: "saas_productivity",    label: "SaaS / Productivity" },
@@ -28,32 +29,8 @@ type SectorId = typeof SECTORS[number]["id"];
 type Phase = "idle" | "pipeline" | "celebrating";
 type IntegrationStatus = "idle" | "connecting" | "connected";
 
-const STEP_SCHEDULE_CSV: Array<{ id: StepId; delay: number; detail: string }> = [
-  { id: "ingestion",   delay: 1600,  detail: "3,416 financial records" },
-  { id: "kpi",         delay: 4200,  detail: "78 weekly snapshots" },
-  { id: "anomalies",   delay: 7400,  detail: "IsolationForest scanning" },
-  { id: "monte_carlo", delay: 10800, detail: "1,000 simulations running" },
-  { id: "scenarios",   delay: 13800, detail: "Bear · Base · Bull" },
-  { id: "market",      delay: 16500, detail: "Scanning competitor signals" },
-];
-
-const STEP_SCHEDULE_STRIPE: Array<{ id: StepId; delay: number; detail: string }> = [
-  { id: "ingestion",   delay: 1400,  detail: "Syncing Stripe subscriptions…" },
-  { id: "kpi",         delay: 4000,  detail: "Computing MRR & churn from live data" },
-  { id: "anomalies",   delay: 7000,  detail: "IsolationForest on subscription events" },
-  { id: "monte_carlo", delay: 10400, detail: "1,000 simulations on real MRR" },
-  { id: "scenarios",   delay: 13400, detail: "Bear · Base · Bull from Stripe data" },
-  { id: "market",      delay: 16000, detail: "Scanning competitor signals" },
-];
-
-const STEP_SCHEDULE_QB: Array<{ id: StepId; delay: number; detail: string }> = [
-  { id: "ingestion",   delay: 1400,  detail: "Importing QuickBooks P&L + Cash Flow" },
-  { id: "kpi",         delay: 4000,  detail: "Computing KPIs from accounting data" },
-  { id: "anomalies",   delay: 7000,  detail: "IsolationForest on expense categories" },
-  { id: "monte_carlo", delay: 10400, detail: "1,000 simulations on real burn rate" },
-  { id: "scenarios",   delay: 13400, detail: "Bear · Base · Bull from QB data" },
-  { id: "market",      delay: 16000, detail: "Scanning competitor signals" },
-];
+// Pipeline progress is now driven by real WebSocket events in usePipelineStream.
+// The dashboard page (/run/[runId]) shows live agent log and progress bar.
 
 const DEMO_STATS = [
   { label: "MRR Growth",   value: "+1,550%", sub: "over 18 months",      color: "text-green-600",  bg: "bg-green-50",  border: "border-green-100" },
@@ -191,14 +168,10 @@ export default function HomePage() {
   const companyNameRef = useRef(companyName);
   const sectorRef      = useRef(sector);
   const filesRef       = useRef(files);
-  const timersRef      = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => { companyNameRef.current = companyName; }, [companyName]);
   useEffect(() => { sectorRef.current      = sector; },      [sector]);
   useEffect(() => { filesRef.current       = files; },       [files]);
-
-  // Cleanup timers on unmount
-  useEffect(() => () => { timersRef.current.forEach(clearTimeout); }, []);
 
   // Restore integration state (e.g. after OAuth callback redirect)
   useEffect(() => {
@@ -231,9 +204,6 @@ export default function HomePage() {
       return;
     }
 
-    timersRef.current.forEach(clearTimeout);
-    timersRef.current = [];
-
     setError(null);
     setCelebrating(false);
     setCompletedIds([]);
@@ -241,55 +211,40 @@ export default function HomePage() {
     setPipelineSource(source);
     setPhase("pipeline");
 
-    const schedule =
-      source === "stripe"     ? STEP_SCHEDULE_STRIPE :
-      source === "quickbooks" ? STEP_SCHEDULE_QB     :
-      STEP_SCHEDULE_CSV;
-
-    schedule.forEach(({ id, delay, detail }) => {
-      const t = setTimeout(() => {
-        setCompletedIds(prev => prev.includes(id) ? prev : [...prev, id] as StepId[]);
-        setStepDetails(prev => ({ ...prev, [id]: detail }));
-      }, delay);
-      timersRef.current.push(t);
-    });
-
     try {
-      const result: AnalyzeResponse = isDemo
-        ? await runDemoSync(cn, sc)
-        : await runAnalysisSync(ff[0]!, cn, sc);
+      const runId = crypto.randomUUID();
 
-      timersRef.current.forEach(clearTimeout);
-      timersRef.current = [];
-
-      const allIds = PIPELINE_STEPS.map(s => s.id) as StepId[];
-      setCompletedIds(allIds);
-      setStepDetails({
-        ingestion:
-          source === "stripe"     ? "1,247 Stripe subscription events synced" :
-          source === "quickbooks" ? "QuickBooks P&L + Cash Flow imported"     :
-          "3,416 financial records loaded",
-        kpi:         "78 weekly KPI snapshots computed",
-        anomalies:   `${result.anomalies?.length ?? 0} anomalies flagged`,
-        monte_carlo: "1,000 Monte Carlo simulations",
-        scenarios:   "Bear · Base · Bull computed",
-        market:      "Competitor intelligence gathered",
-      });
-
+      // Persist company/sector immediately so the dashboard page can read them
+      // before the pipeline finishes (WebSocket will stream real-time progress).
       if (typeof window !== "undefined") {
         sessionStorage.setItem(
-          `run_${result.run_id}`,
-          JSON.stringify({ ...result, company_name: cn, sector: sc }),
+          `run_${runId}`,
+          JSON.stringify({ run_id: runId, company_name: cn, sector: sc }),
         );
       }
 
-      const t1 = setTimeout(() => { setCelebrating(true); setPhase("celebrating"); }, 600);
-      const t2 = setTimeout(() => { router.push(`/run/${result.run_id}`); }, 1600);
-      timersRef.current = [t1, t2];
+      if (isDemo) {
+        const params = new URLSearchParams({
+          run_id:       runId,
+          company_name: cn,
+          sector:       sc,
+        });
+        const res = await fetch(`${API_BASE}/demo/async?${params}`, { method: "POST" });
+        if (!res.ok) throw new Error(`API error ${res.status}`);
+      } else {
+        const form = new FormData();
+        form.append("file",         ff[0]!);
+        form.append("run_id",       runId);
+        form.append("company_name", cn);
+        form.append("sector",       sc);
+        const res = await fetch(`${API_BASE}/analyze/async`, { method: "POST", body: form });
+        if (!res.ok) throw new Error(`API error ${res.status}`);
+      }
+
+      // Navigate immediately — WebSocket on the dashboard page streams real progress.
+      router.push(`/run/${runId}`);
 
     } catch (e) {
-      timersRef.current.forEach(clearTimeout);
-      timersRef.current = [];
       setError(e instanceof Error ? e.message : "Analysis failed. Is the API running?");
       setPhase("idle");
     }

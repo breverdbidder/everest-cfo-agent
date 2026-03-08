@@ -3,14 +3,17 @@ import { useEffect, useState } from "react";
 import { RefreshCw, TrendingDown, TrendingUp, Wallet, Plus, X } from "lucide-react";
 import { CashFlowChart } from "@/components/charts/cash-flow-chart";
 import { getCashFlow, refreshForecast, setCashBalance, addCommittedExpense } from "@/lib/api";
+import { applyCashFlowSimulation, type DecisionSimulation } from "@/lib/decision-simulator";
 import type { CashFlowSectionData } from "@/lib/types";
 import { fmtK } from "@/lib/utils";
 
 interface Props {
   runId: string;
+  refreshTrigger?: boolean;
+  simulation?: DecisionSimulation | null;
 }
 
-export function CashFlowSection({ runId }: Props) {
+export function CashFlowSection({ runId, refreshTrigger, simulation }: Props) {
   const [data, setData] = useState<CashFlowSectionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -25,16 +28,16 @@ export function CashFlowSection({ runId }: Props) {
   useEffect(() => {
     getCashFlow(runId)
       .then(setData)
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
-  }, [runId]);
+  }, [runId, refreshTrigger]);
 
   async function handleRefresh() {
     setRefreshing(true);
     try {
       const updated = await refreshForecast(runId);
       setData(updated);
-    } catch {}
+    } catch { }
     setRefreshing(false);
   }
 
@@ -53,7 +56,7 @@ export function CashFlowSection({ runId }: Props) {
       setShowExpenseForm(false);
       const updated = await refreshForecast(runId);
       setData(updated);
-    } catch {}
+    } catch { }
     setSubmitting(false);
   }
 
@@ -66,44 +69,50 @@ export function CashFlowSection({ runId }: Props) {
       setCashAmount("");
       const updated = await refreshForecast(runId);
       setData(updated);
-    } catch {}
+    } catch { }
     setSubmitting(false);
   }
 
-  const weeksUntilZero = data?.weeks_until_zero_p50;
+  const displayData = applyCashFlowSimulation(data, simulation ?? null);
+  const weeksUntilZero = displayData?.weeks_until_zero_p50;
   const urgencyColor = weeksUntilZero == null ? "text-green-600" :
     weeksUntilZero < 8 ? "text-red-500" :
-    weeksUntilZero < 20 ? "text-amber-600" : "text-green-600";
+      weeksUntilZero < 20 ? "text-amber-600" : "text-green-600";
 
   return (
-    <div className="grid grid-cols-3 gap-5 items-stretch">
+    <div className="grid grid-cols-1 gap-5 items-stretch lg:grid-cols-3">
       {/* ── Left: Chart ─────────────────────────────────────────────────────── */}
-      <div className="col-span-2 card-brutal p-5 flex flex-col h-full">
-        <div className="flex items-center justify-between mb-3">
+      <div className="card-brutal flex h-full flex-col bg-gradient-to-br from-white to-gray-50/50 p-5 shadow-sm border-gray-200/80 lg:col-span-2">
+        <div className="flex items-center justify-between mb-3 border-b border-gray-100 pb-3">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">
-              13-WEEK CASH POSITION
+            <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-500 mb-0.5 flex items-center gap-1">
+              <TrendingUp className="h-3 w-3" /> 13-WEEK CASH POSITION
             </div>
             <div className="text-sm font-semibold text-gray-700">P10 / P50 / P90 Balance Forecast</div>
+            {simulation && (
+              <div className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[10px] font-semibold text-cyan-700">
+                Simulating {simulation.title} · +{fmtK(simulation.weeklyImpact)}/wk
+              </div>
+            )}
           </div>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center gap-1 text-[10px] font-semibold text-gray-400 hover:text-gray-600 transition-colors"
+            className="flex items-center gap-1.5 text-[10px] font-semibold bg-white border border-gray-200 px-3 py-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-all shadow-sm active:scale-95"
           >
             <RefreshCw className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`} />
             Refresh
           </button>
         </div>
-        <div className="flex-1 min-h-0 h-[220px]">
+        <div className="flex-1 min-h-0 h-[220px] rounded-xl overflow-hidden mt-2">
           {loading ? (
-            <div className="h-full flex items-center justify-center text-gray-300 text-xs">
+            <div className="h-full flex items-center justify-center text-gray-300 text-xs bg-gray-50/50">
               Computing forecast...
             </div>
-          ) : data?.forecast?.length ? (
-            <CashFlowChart forecast={data.forecast} />
+          ) : displayData?.forecast?.length ? (
+            <CashFlowChart forecast={displayData.forecast} />
           ) : (
-            <div className="h-full flex items-center justify-center text-gray-300 text-xs">
+            <div className="h-full flex items-center justify-center text-gray-300 text-xs bg-gray-50/50">
               No KPI data available
             </div>
           )}
@@ -111,8 +120,21 @@ export function CashFlowSection({ runId }: Props) {
       </div>
 
       {/* ── Right: Stats + Controls ──────────────────────────────────────────── */}
-      <div className="card-brutal p-5 flex flex-col gap-4 h-full">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Cash Position</div>
+      <div className="card-brutal relative flex h-full flex-col gap-4 overflow-hidden bg-white p-5 shadow-sm border-gray-200/80">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 to-teal-500" />
+        <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mt-1">Cash Position</div>
+
+        {simulation && (
+          <div className="rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-center">
+            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-700">
+              Simulation active
+            </div>
+            <div className="mt-1 text-sm font-semibold text-cyan-900">{simulation.title}</div>
+            <div className="mt-1 text-xs text-cyan-700">
+              Modeled swing: +{fmtK(simulation.weeklyImpact)}/week
+            </div>
+          </div>
+        )}
 
         {/* Current cash */}
         <div>
@@ -147,10 +169,10 @@ export function CashFlowSection({ runId }: Props) {
               className="group w-full text-left"
             >
               <div className="text-2xl font-black tabular-nums text-gray-900">
-                {data ? fmtK(data.current_cash) : "..."}
+                {displayData ? fmtK(displayData.current_cash) : "..."}
               </div>
               <div className="text-[9px] text-gray-400 group-hover:text-blue-500 transition-colors">
-                {data ? "estimated" : ""} · click to update
+                {displayData ? "estimated" : ""} · click to update
               </div>
             </button>
           )}
@@ -161,9 +183,9 @@ export function CashFlowSection({ runId }: Props) {
           <div className="text-[10px] text-gray-400 mb-0.5 flex items-center gap-1">
             <TrendingDown className="h-3 w-3 text-red-400" /> Committed weekly
           </div>
-          {data && data.total_committed_weekly > 0 ? (
+          {displayData && displayData.total_committed_weekly > 0 ? (
             <div className="text-lg font-bold text-red-500 tabular-nums">
-              {fmtK(data.total_committed_weekly)}
+              {fmtK(displayData.total_committed_weekly)}
             </div>
           ) : (
             <div className="text-sm font-medium text-gray-400 italic">None added yet</div>
@@ -183,20 +205,20 @@ export function CashFlowSection({ runId }: Props) {
         </div>
 
         {/* Committed expenses list */}
-        {data?.committed_expenses && data.committed_expenses.length > 0 && (
+        {displayData?.committed_expenses && displayData.committed_expenses.length > 0 && (
           <div className="border-t border-gray-100 pt-3">
             <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
               Committed Expenses
             </div>
             <div className="space-y-1">
-              {data.committed_expenses.slice(0, 3).map((e) => (
+              {displayData.committed_expenses.slice(0, 3).map((e) => (
                 <div key={e.id} className="flex justify-between items-center text-[10px]">
                   <span className="text-gray-600 truncate max-w-[100px]">{e.name}</span>
                   <span className="font-mono text-gray-500">{fmtK(e.amount)}/{e.frequency.slice(0, 2)}</span>
                 </div>
               ))}
-              {data.committed_expenses.length > 3 && (
-                <div className="text-[9px] text-gray-400">+{data.committed_expenses.length - 3} more</div>
+              {displayData.committed_expenses.length > 3 && (
+                <div className="text-[9px] text-gray-400">+{displayData.committed_expenses.length - 3} more</div>
               )}
             </div>
           </div>

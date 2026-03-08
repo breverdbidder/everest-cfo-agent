@@ -5,27 +5,27 @@
 
 > **The AI CFO that 99% of startups can't afford — now open source.**
 
-Drop a CSV of weekly transactions. Get board-ready financial intelligence in 30 seconds — a real-time **Financial Health Score (0-100)** with live Claude reasoning, Monte Carlo survival analysis, VC investment memos, pre-mortem scenarios, cap table dilution, industry benchmarking, and an autonomous agent that monitors your finances 24/7. Powered by Claude Haiku at **~$0.003 per run**.
+Drop a CSV of weekly transactions and get a board-ready finance cockpit in ~30 seconds: a live **Financial Health Score**, KPI command center, runway and Monte Carlo survival analysis, competitor intel, AI reports, and a new **AI CFO Decision Engine** that recommends actions, simulates impact across the dashboard, saves scenarios, and exports a shareable board snapshot. Optimized for low-cost inference at **~$0.003 per run**, with the decision layer itself running rules-first to avoid extra API spend.
 
 ---
 
 ## Screenshots
 
-| Financial Health Score (0-100) | Dashboard Overview |
+| Landing Page | Decision Engine |
 |---|---|
-| ![Health Score](docs/screenshots/00-health-score.png) | ![Dashboard](docs/screenshots/02-dashboard-overview.png) |
+| ![Landing](docs/screenshots/01-landing.png) | ![Decision Engine](docs/screenshots/07-decision-engine.png) |
 
-| Autonomous CFO Agent (section 2) | AI Intelligence Center |
+| Dashboard Overview | AI Intelligence Center |
 |---|---|
-| ![Autonomous Agent](docs/screenshots/03-autonomous-agent.png) | ![AI Center](docs/screenshots/04-ai-intelligence-center.png) |
+| ![Dashboard](docs/screenshots/02-dashboard-overview.png) | ![AI Center](docs/screenshots/04-ai-intelligence-center.png) |
 
-| Pipeline with Agent Activity Log | Runway Explorer |
+| Autonomous CFO Agent | Runway Explorer |
 |---|---|
-| ![Pipeline Log](docs/screenshots/06-pipeline-agent-log.png) | ![Runway](docs/screenshots/05-runway-explorer.png) |
+| ![Autonomous Agent](docs/screenshots/03-autonomous-agent.png) | ![Runway](docs/screenshots/05-runway-explorer.png) |
 
 ---
 
-## 24 Features
+## Featured Capabilities
 
 | Category | Feature |
 |---|---|
@@ -33,6 +33,9 @@ Drop a CSV of weekly transactions. Get board-ready financial intelligence in 30 
 | **KPI Engine** | 7 KPI cards (MRR, ARR, Burn, Gross Margin, Churn, CAC, LTV) + click-to-expand deep-dive charts |
 | **Survival** | Monte Carlo (10K simulations) → ruin probability at 90d / 180d / 365d |
 | **Runway** | Horizontal fuel-gauge bar + cut-burn / grow-MRR sliders with per-lever impact chips |
+| **Decision Engine** | Rules-first AI CFO Decision Engine ranks the top moves this week, explains why, and applies them across runway, scenarios, and cash flow with zero extra paid API calls |
+| **Scenario Vault** | Save recommended plans to the backend per run so they survive refreshes and can be reloaded later |
+| **Board Snapshot** | Export the current plan as PNG, HTML, print view, or copyable board summary |
 | **Morning Briefing** | 7 AM proactive text: runway, urgent alerts, 3 AI actions + iMessage preview in dashboard |
 | **Scenarios** | Bear / Base / Bull stress test with Series A readiness verdict |
 | **AI Reports** | Board Q&A (8 adversarial VC questions), CFO Report, VC Verdict, Investor Update |
@@ -83,6 +86,8 @@ cd frontend && npm install && npm run dev
 
 Open **http://localhost:3000** and click **Run Demo** — no file upload needed.
 
+This repo does **not** use `pipenv`. If you are working from the project-local virtualenv, the equivalent backend command is `.venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8000`.
+
 ---
 
 ## API Keys
@@ -108,9 +113,23 @@ date,category,amount,customer_id
 2024-01-07,cogs,-3200.00,
 ```
 
-**Valid categories**: `subscription_revenue` · `churn_refund` · `salary_expense` · `marketing_expense` · `cogs` · `software_expense` · `office_rent` · `travel_expense` · `contractor_expense` · `tax_payment` · `professional_services`
+**Valid categories**: `subscription_revenue` · `churn_refund` · `salary_expense` · `marketing_expense` · `cogs` · `software_expense` · `tax_payment`
 
 Download a blank template from the upload page or `GET /analyze/template`.
+
+---
+
+## Example Upload Files
+
+Need realistic files for a demo, GitHub download, or manual upload test? Use the five examples in [`examples/uploads`](examples/uploads):
+
+- `saas_recovery_arc.csv`
+- `fintech_runway_reset.csv`
+- `healthtech_enterprise_mix.csv`
+- `marketplace_margin_crunch.csv`
+- `devtools_plg_growth.csv`
+
+They all match the live upload schema, so you can drag them straight into the app.
 
 ---
 
@@ -169,6 +188,61 @@ Autonomous Agent Loop (runs on-demand or via Celery Beat):
 
 ---
 
+## Real-Time Streaming Architecture
+
+The pipeline uses **WebSocket streaming** for real-time progress — with automatic polling fallback for restricted environments (corporate firewalls, proxies).
+
+```
+Frontend (Next.js)
+  │
+  ├── 1. Generates run_id (crypto.randomUUID)
+  ├── 2. Calls POST /demo/async?run_id=... → returns immediately
+  ├── 3. Navigates to /run/{runId} dashboard
+  └── 4. usePipelineStream hook connects WebSocket
+         ws://localhost:8000/ws/pipeline/{runId}
+               │
+               │  real-time events
+               ▼
+FastAPI WebSocket endpoint (/ws/pipeline/{run_id})
+  │
+  └── ConnectionManager (pub/sub, per run_id)
+        ▲
+        │  publish_event()
+        │
+LangGraph pipeline nodes (in order):
+  _router_node       → pipeline_started      (0%)
+  _ingestion_node    → agent_started/completed (5%→20%)
+  _persist_raw_node  → agent_started/completed (22%→30%)
+  _analysis_node     → agent_started/completed (32%→75%)
+  _market_analyze_node → agent_started/completed (77%→95%)
+  run_analyze()      → pipeline_completed    (100%)
+```
+
+**Event payload example:**
+```json
+{"event_type": "agent_completed", "agent_name": "AnalysisAgent",
+ "progress": 75, "message": "KPIs computed — MRR $25,500, 5 anomalies detected",
+ "data": {"mrr": 25500, "gross_margin": 0.73, "anomaly_count": 5}}
+```
+
+**Graceful degradation:** if WebSocket fails to open within 5 s, `usePipelineStream` auto-switches to polling `GET /runs/{runId}/status` every 2 s and synthesises equivalent events — the dashboard UI is identical regardless of transport.
+
+**Configuration** (`frontend/.env.local`):
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_WS_URL=ws://localhost:8000   # use wss:// in production
+```
+
+**Interview talking points this demonstrates:**
+- Event-driven pub/sub architecture (ConnectionManager pattern)
+- Production-grade graceful degradation (WebSocket → polling fallback)
+- Async Python: FastAPI WebSocket + LangGraph background task coexist cleanly
+- React hooks with real-time state management (`usePipelineStream`)
+- Config management via environment variables (no hardcoded URLs)
+- Backward-compatible API design: existing REST endpoints unchanged
+
+---
+
 ## Demo Data
 
 78-week synthetic B2B SaaS dataset with a realistic crisis/recovery arc:
@@ -182,6 +256,24 @@ Autonomous Agent Loop (runs on-demand or via Celery Beat):
 | 5 | 56–78 | Hypergrowth: 3 more enterprise wins, MRR hits $42K/wk |
 
 Regenerate: `python3 data/gen_drama.py`
+
+---
+
+## GitHub Upload Safety
+
+The repo is set up so local secrets and databases stay out of version control:
+
+- `.env`, `.env.local`, `frontend/.env.local`, and `*.env` are ignored.
+- Local SQLite files like `ai_cfo.db` are ignored.
+- Commit `.env.example`, not your real `.env`.
+
+Before pushing, run:
+
+```bash
+git ls-files '.env*' 'frontend/.env.local' 'ai_cfo.db'
+rg -n '(ANTHROPIC_API_KEY|TAVILY_API_KEY|SLACK_WEBHOOK_URL|sk-ant-|xoxb-|AKIA|AIza)' \
+  --glob '!node_modules' --glob '!.venv' --glob '!.git'
+```
 
 ---
 
@@ -235,6 +327,7 @@ api/             FastAPI app, models, schemas, DB manager
 graph/           LangGraph orchestration
 frontend/        Next.js 15 App Router dashboard
 data/            Demo CSV + competitor profiles + industry benchmarks
+examples/uploads Realistic sample CSVs for the upload box
 alembic/         Database migration scripts
 scripts/         Playwright visual check, morning briefing cron script
 docs/            Screenshots

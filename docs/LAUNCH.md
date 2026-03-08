@@ -7,7 +7,7 @@
 - 24 automated financial intelligence features
 - Autonomous perceive → reason → plan → execute → learn loop
 - Runs entirely on your machine — financial data never leaves
-- Powered by Claude Haiku (~$0.003/analysis cycle)
+- Optimized for low-cost inference (~$0.003/analysis cycle)
 - MIT license — fork it, build on it
 
 ---

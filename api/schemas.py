@@ -319,6 +319,33 @@ class BoardDeckStatusResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Decision Engine / Saved Scenarios
+# ---------------------------------------------------------------------------
+
+class SavedScenarioCreateRequest(BaseModel):
+    label: str = Field(min_length=1, max_length=120)
+    simulation_id: str = Field(min_length=1, max_length=50)
+    summary: str | None = None
+    runway_months_before: float = Field(ge=0)
+    runway_months_after: float = Field(ge=0)
+    weekly_impact: float
+    proof_points: list[str] = Field(default_factory=list, max_length=4)
+
+
+class SavedScenarioResponse(BaseModel):
+    id: uuid.UUID
+    run_id: uuid.UUID
+    label: str
+    simulation_id: str
+    summary: str | None = None
+    runway_months_before: float
+    runway_months_after: float
+    weekly_impact: float
+    proof_points: list[str] = Field(default_factory=list)
+    created_at: datetime
+
+
+# ---------------------------------------------------------------------------
 # Integration schemas
 # ---------------------------------------------------------------------------
 

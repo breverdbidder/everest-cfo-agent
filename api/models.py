@@ -226,6 +226,23 @@ class BoardDeck(Base):
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class SavedScenario(Base):
+    """Persisted decision-engine scenario for a run."""
+
+    __tablename__ = "saved_scenarios"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    run_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, index=True)
+    label: Mapped[str] = mapped_column(String(120), nullable=False)
+    simulation_id: Mapped[str] = mapped_column(String(50), nullable=False)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    runway_months_before: Mapped[Decimal] = mapped_column(Numeric(8, 2), nullable=False)
+    runway_months_after: Mapped[Decimal] = mapped_column(Numeric(8, 2), nullable=False)
+    weekly_impact: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    proof_points: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class FraudAlert(Base):
     """Suspicious transaction patterns detected by rule-based fraud analysis."""
 
@@ -332,6 +349,7 @@ __all__ = [
     "Contract",
     "DeferredRevenueSchedule",
     "BoardDeck",
+    "SavedScenario",
     "FraudAlert",
     "CustomerProfile",
     "AgentObservation",

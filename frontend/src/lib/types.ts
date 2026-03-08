@@ -69,6 +69,25 @@ export interface AnalyzeResponse {
   sector?: string;
 }
 
+export interface AnalysisSummaryData {
+  run_id: string;
+  survival_analysis: SurvivalAnalysis | null;
+  scenario_analysis: ScenarioResult[];
+}
+
+export interface SavedScenarioRecord {
+  id: string;
+  run_id: string;
+  label: string;
+  simulation_id: string;
+  summary: string | null;
+  runway_months_before: number;
+  runway_months_after: number;
+  weekly_impact: number;
+  proof_points: string[];
+  created_at: string;
+}
+
 export interface CompetitorProfile {
   name: string;
   domain: string;

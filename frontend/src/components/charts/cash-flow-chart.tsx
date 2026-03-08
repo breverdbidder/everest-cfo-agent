@@ -99,7 +99,8 @@ export function CashFlowChart({ forecast }: Props) {
           fill="transparent"
           stroke="none"
           legendType="none"
-          isAnimationActive={false}
+          isAnimationActive
+          animationDuration={450}
         />
         {/* band_hi sits on top of band_lo → appears as P10→P90 shaded region */}
         <Area
@@ -109,7 +110,8 @@ export function CashFlowChart({ forecast }: Props) {
           fillOpacity={0.12}
           stroke="none"
           name="P10–P90 range"
-          isAnimationActive={false}
+          isAnimationActive
+          animationDuration={450}
         />
 
         {/* ── Lines ── */}
@@ -119,7 +121,8 @@ export function CashFlowChart({ forecast }: Props) {
           strokeWidth={2.5}
           dot={false}
           name="Median (P50)"
-          isAnimationActive={false}
+          isAnimationActive
+          animationDuration={500}
         />
         <Line
           dataKey="predicted_balance_p90"
@@ -128,7 +131,8 @@ export function CashFlowChart({ forecast }: Props) {
           strokeDasharray="4 2"
           dot={false}
           name="Optimistic (P90)"
-          isAnimationActive={false}
+          isAnimationActive
+          animationDuration={500}
         />
         <Line
           dataKey="predicted_balance_p10"
@@ -137,7 +141,8 @@ export function CashFlowChart({ forecast }: Props) {
           strokeDasharray="4 2"
           dot={false}
           name="Stressed (P10)"
-          isAnimationActive={false}
+          isAnimationActive
+          animationDuration={500}
         />
       </ComposedChart>
     </ResponsiveContainer>

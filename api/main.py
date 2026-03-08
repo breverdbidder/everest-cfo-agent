@@ -16,7 +16,7 @@ from typing import Any, Callable
 import httpx
 import json as _json
 
-from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import func as sqlfunc, select
@@ -34,6 +34,7 @@ from api.models import (
     KPISnapshot,
     MarketSignal,
     RawFinancial,
+    SavedScenario,
 )
 from api.schemas import (
     AnalyzeResponse,
@@ -50,15 +51,18 @@ from api.schemas import (
     IntegrationStatusResponse,
     InvestorUpdateRequest,
     InvestorUpdateResponse,
+    KPISnapshotRecord,
     OAuthAuthorizeResponse,
     ReportRequest,
     HealthScoreResponse,
     ReportResponse,
+    SavedScenarioCreateRequest,
+    SavedScenarioResponse,
     SyncResponse,
     VCMemoRequest,
     VCMemoResponse,
 )
-from agents.board_deck_generator import BoardDeckGenerator
+from agents.analysis import compute_scenario_stress_test, compute_survival_analysis
 from agents.cash_flow_forecaster import CashFlowForecaster
 from agents.deferred_revenue import DeferredRevenueCalculator
 from agents.insight_writer import generate_investor_update, generate_vc_memo, generate_pre_mortem, generate_board_chat
@@ -66,8 +70,16 @@ from agents.morning_briefing import generate_morning_briefing
 from agents.quickbooks_sync import QuickBooksIngestionAgent
 from agents.stripe_sync import StripeIngestionAgent
 from graph.cfo_graph import CFOGraphRunner, build_graph_runner
+from api.streaming import manager as ws_manager
 
 _PROJECT_ROOT = Path(__file__).parent.parent
+
+
+def _get_board_deck_generator() -> type:
+    """Import the optional board-deck generator only when needed."""
+    from agents.board_deck_generator import BoardDeckGenerator
+
+    return BoardDeckGenerator
 
 
 def _load_app_version() -> str:
@@ -84,11 +96,86 @@ async def _run_analyze_bg(
     file_name: str,
     file_bytes: bytes,
     run_id: uuid.UUID,
+    company_name: str = "",
+    sector: str = "saas_productivity",
+    seed_demo_contracts: bool = False,
 ) -> None:
     """Background task: run the full analysis pipeline for a given run_id."""
     try:
+        # Seed demo deferred revenue contracts + committed expenses so dashboard shows real data
+        if seed_demo_contracts:
+            try:
+                from datetime import timedelta
+                today = date.today()
+                db_manager = get_db_manager()
+                async with db_manager.session() as session:
+                    # Demo contracts for deferred revenue
+                    demo_contracts = [
+                        Contract(
+                            run_id=run_id, customer_id="acme_enterprise",
+                            total_value=Decimal("120000"),
+                            start_date=today - timedelta(days=180),
+                            end_date=today + timedelta(days=185),
+                            payment_terms="annual",
+                        ),
+                        Contract(
+                            run_id=run_id, customer_id="bigco_corp",
+                            total_value=Decimal("84000"),
+                            start_date=today - timedelta(days=90),
+                            end_date=today + timedelta(days=275),
+                            payment_terms="annual",
+                        ),
+                        Contract(
+                            run_id=run_id, customer_id="series_a_startup",
+                            total_value=Decimal("60000"),
+                            start_date=today - timedelta(days=30),
+                            end_date=today + timedelta(days=335),
+                            payment_terms="quarterly",
+                        ),
+                    ]
+                    session.add_all(demo_contracts)
+
+                    # Demo committed expenses for cash flow forecast
+                    demo_expenses = [
+                        CommittedExpense(
+                            run_id=run_id, name="Office Lease (WeWork)",
+                            amount=Decimal("4200"), frequency="monthly",
+                            next_payment_date=today + timedelta(days=7),
+                            category="office_rent",
+                        ),
+                        CommittedExpense(
+                            run_id=run_id, name="AWS Infrastructure",
+                            amount=Decimal("8500"), frequency="monthly",
+                            next_payment_date=today + timedelta(days=14),
+                            category="software_expense",
+                        ),
+                        CommittedExpense(
+                            run_id=run_id, name="Engineering Payroll",
+                            amount=Decimal("45000"), frequency="monthly",
+                            next_payment_date=today + timedelta(days=1),
+                            category="payroll",
+                        ),
+                        CommittedExpense(
+                            run_id=run_id, name="Freelance Contractors",
+                            amount=Decimal("18000"), frequency="weekly",
+                            next_payment_date=today + timedelta(days=3),
+                            category="salary_expense",
+                        ),
+                    ]
+                    session.add_all(demo_expenses)
+                    await session.commit()
+                    # compute deferred revenue
+                    from agents.deferred_revenue import DeferredRevenueCalculator
+                    await DeferredRevenueCalculator().run(session, run_id)
+            except Exception as e:
+                print(f"Failed to seed demo contracts: {e}")
+
         await graph_runner.run_analyze(
-            file_name=file_name, file_bytes=file_bytes, run_id=run_id
+            file_name=file_name,
+            file_bytes=file_bytes,
+            run_id=run_id,
+            company_name=company_name,
+            sector=sector,
         )
     except Exception:
         pass  # Errors surface through /runs/{run_id}/status
@@ -248,39 +335,58 @@ def create_app(
     # ── Async endpoints (return immediately, pipeline runs in background) ─────
 
     @app.post("/demo/async")
-    async def demo_async(background_tasks: BackgroundTasks) -> dict:
-        """Start demo pipeline in background; poll /runs/{run_id}/status for progress."""
+    async def demo_async(
+        background_tasks: BackgroundTasks,
+        run_id: str | None = None,
+        company_name: str | None = None,
+        sector: str | None = None,
+    ) -> dict:
+        """Start demo pipeline in background; poll /runs/{run_id}/status or subscribe via WebSocket."""
         demo_csv = _PROJECT_ROOT / "data" / "sample_financials.csv"
         if not demo_csv.exists():
             raise HTTPException(status_code=404, detail="Demo data not found")
-        run_id = uuid.uuid4()
+        try:
+            resolved_run_id = uuid.UUID(run_id) if run_id else uuid.uuid4()
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=f"Invalid run_id: {exc}") from exc
         background_tasks.add_task(
             _run_analyze_bg,
             graph_runner=app.state.graph_runner,
             file_name="sample_financials.csv",
             file_bytes=demo_csv.read_bytes(),
-            run_id=run_id,
+            run_id=resolved_run_id,
+            company_name=company_name or "Synapse AI",
+            sector=sector or "saas_productivity",
+            seed_demo_contracts=True,
         )
-        return {"run_id": str(run_id), "status": "started"}
+        return {"run_id": str(resolved_run_id), "status": "started"}
 
     @app.post("/analyze/async")
     async def analyze_async(
         background_tasks: BackgroundTasks,
         file: UploadFile = File(...),
+        run_id: str | None = Form(default=None),
+        company_name: str = Form(default=""),
+        sector: str = Form(default="saas_productivity"),
     ) -> dict:
-        """Start file analysis in background; poll /runs/{run_id}/status for progress."""
+        """Start file analysis in background; poll /runs/{run_id}/status or subscribe via WebSocket."""
         content = await file.read()
         if not content:
             raise HTTPException(status_code=400, detail="Uploaded file is empty")
-        run_id = uuid.uuid4()
+        try:
+            resolved_run_id = uuid.UUID(run_id) if run_id else uuid.uuid4()
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=f"Invalid run_id: {exc}") from exc
         background_tasks.add_task(
             _run_analyze_bg,
             graph_runner=app.state.graph_runner,
             file_name=file.filename or "upload",
             file_bytes=content,
-            run_id=run_id,
+            run_id=resolved_run_id,
+            company_name=company_name,
+            sector=sector,
         )
-        return {"run_id": str(run_id), "status": "started"}
+        return {"run_id": str(resolved_run_id), "status": "started"}
 
     # ── Pipeline status polling ───────────────────────────────────────────────
 
@@ -366,6 +472,120 @@ def create_app(
             }
             for r in rows
         ]
+
+    @app.get("/runs/{run_id}/analysis-summary")
+    async def run_analysis_summary(run_id: uuid.UUID) -> dict:
+        """Recompute survival and scenario outputs from stored KPI snapshots."""
+        db_manager = app.state.db_manager if hasattr(app.state, "db_manager") else get_db_manager()
+        async with db_manager.session() as session:
+            rows = (await session.execute(
+                select(KPISnapshot)
+                .where(KPISnapshot.run_id == run_id)
+                .order_by(KPISnapshot.week_start)
+            )).scalars().all()
+
+        if not rows:
+            raise HTTPException(status_code=404, detail="No KPI data found for this run")
+
+        snapshots = [
+            KPISnapshotRecord(
+                run_id=r.run_id,
+                week_start=r.week_start,
+                mrr=r.mrr,
+                arr=r.arr,
+                churn_rate=r.churn_rate,
+                burn_rate=r.burn_rate,
+                gross_margin=r.gross_margin,
+                cac=r.cac,
+                ltv=r.ltv,
+                wow_delta=r.wow_delta or {},
+                mom_delta=r.mom_delta or {},
+            )
+            for r in rows
+        ]
+
+        return {
+            "run_id": str(run_id),
+            "survival_analysis": compute_survival_analysis(snapshots),
+            "scenario_analysis": compute_scenario_stress_test(snapshots),
+        }
+
+    @app.get("/runs/{run_id}/saved-scenarios", response_model=list[SavedScenarioResponse])
+    async def list_saved_scenarios(run_id: uuid.UUID) -> list[SavedScenarioResponse]:
+        """Return persisted decision-engine scenarios for this run."""
+        db_manager = app.state.db_manager if hasattr(app.state, "db_manager") else get_db_manager()
+        async with db_manager.session() as session:
+            rows = (await session.execute(
+                select(SavedScenario)
+                .where(SavedScenario.run_id == run_id)
+                .order_by(SavedScenario.created_at.desc())
+            )).scalars().all()
+
+        return [
+            SavedScenarioResponse(
+                id=row.id,
+                run_id=row.run_id,
+                label=row.label,
+                simulation_id=row.simulation_id,
+                summary=row.summary,
+                runway_months_before=float(row.runway_months_before or 0),
+                runway_months_after=float(row.runway_months_after or 0),
+                weekly_impact=float(row.weekly_impact or 0),
+                proof_points=list(row.proof_points or []),
+                created_at=row.created_at,
+            )
+            for row in rows
+        ]
+
+    @app.post("/runs/{run_id}/saved-scenarios", response_model=SavedScenarioResponse)
+    async def create_saved_scenario(
+        run_id: uuid.UUID,
+        payload: SavedScenarioCreateRequest,
+    ) -> SavedScenarioResponse:
+        """Persist a decision-engine scenario so it survives refreshes and sharing."""
+        db_manager = app.state.db_manager if hasattr(app.state, "db_manager") else get_db_manager()
+        record = SavedScenario(
+            run_id=run_id,
+            label=payload.label.strip(),
+            simulation_id=payload.simulation_id,
+            summary=payload.summary.strip() if payload.summary else None,
+            runway_months_before=Decimal(str(payload.runway_months_before)),
+            runway_months_after=Decimal(str(payload.runway_months_after)),
+            weekly_impact=Decimal(str(payload.weekly_impact)),
+            proof_points=payload.proof_points[:4],
+        )
+        async with db_manager.session() as session:
+            session.add(record)
+            await session.commit()
+            await session.refresh(record)
+
+        return SavedScenarioResponse(
+            id=record.id,
+            run_id=record.run_id,
+            label=record.label,
+            simulation_id=record.simulation_id,
+            summary=record.summary,
+            runway_months_before=float(record.runway_months_before or 0),
+            runway_months_after=float(record.runway_months_after or 0),
+            weekly_impact=float(record.weekly_impact or 0),
+            proof_points=list(record.proof_points or []),
+            created_at=record.created_at,
+        )
+
+    @app.delete("/runs/{run_id}/saved-scenarios/{scenario_id}")
+    async def delete_saved_scenario(run_id: uuid.UUID, scenario_id: uuid.UUID) -> dict[str, str]:
+        """Delete a persisted decision-engine scenario."""
+        db_manager = app.state.db_manager if hasattr(app.state, "db_manager") else get_db_manager()
+        async with db_manager.session() as session:
+            record = (await session.execute(
+                select(SavedScenario)
+                .where(SavedScenario.run_id == run_id, SavedScenario.id == scenario_id)
+            )).scalar_one_or_none()
+            if record is None:
+                raise HTTPException(status_code=404, detail="Saved scenario not found")
+            await session.delete(record)
+            await session.commit()
+        return {"status": "deleted"}
 
     @app.get("/runs/{run_id}/health-score", response_model=HealthScoreResponse)
     async def health_score_endpoint(run_id: uuid.UUID, refresh: bool = False):
@@ -800,7 +1020,7 @@ def create_app(
         """Background task: generate PowerPoint board deck."""
         try:
             async with db_manager.session() as session:
-                generator = BoardDeckGenerator()
+                generator = _get_board_deck_generator()()
                 await generator.run(session, run_id, company_name)
         except Exception as e:
             # Mark deck as failed
@@ -819,6 +1039,14 @@ def create_app(
         company_name: str = "Portfolio Company",
     ) -> dict:
         """Trigger async PowerPoint board deck generation."""
+        try:
+            _get_board_deck_generator()
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Board deck generation is unavailable: {exc}",
+            ) from exc
+
         db_manager = app.state.db_manager if hasattr(app.state, "db_manager") else get_db_manager()
         # Create a "generating" record immediately
         async with db_manager.session() as session:
@@ -1390,6 +1618,27 @@ def create_app(
                 for o in observations
             ],
         }
+
+    # ── Real-time WebSocket streaming ────────────────────────────────────────
+
+    @app.websocket("/ws/pipeline/{run_id}")
+    async def pipeline_stream(websocket: WebSocket, run_id: str) -> None:
+        """WebSocket endpoint for real-time pipeline progress events.
+
+        Connect before (or immediately after) triggering /demo/async or /analyze/async.
+        The server publishes events as each pipeline node completes:
+          pipeline_started → agent_started → agent_completed → pipeline_completed
+
+        Client keepalive: send "ping", receive "pong".
+        """
+        await ws_manager.connect(run_id, websocket)
+        try:
+            while True:
+                data = await websocket.receive_text()
+                if data == "ping":
+                    await websocket.send_text("pong")
+        except WebSocketDisconnect:
+            ws_manager.disconnect(run_id, websocket)
 
     # ── Morning CFO Briefing ─────────────────────────────────────────────
     @app.post("/briefing/preview")

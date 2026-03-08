@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from tavily import TavilyClient
 
@@ -175,7 +176,7 @@ class MarketAgent:
         )
 
         try:
-            async with httpx.AsyncClient(timeout=8.0) as client:
+            async with httpx.AsyncClient(timeout=3.0) as client:
                 r = await client.get(url, headers={"User-Agent": "ai-cfo-agent/1.0"})
                 r.raise_for_status()
                 data = r.json()
@@ -277,7 +278,7 @@ class MarketAgent:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=3.0, follow_redirects=True) as client:
                 response = await client.get(competitor["pricing_url"], headers=headers)
                 response.raise_for_status()
                 html = response.text
@@ -331,23 +332,26 @@ class MarketAgent:
         sector: str | None = None,
         company_name: str | None = None,
     ) -> dict[str, Any]:
+        # Keep signal generation aligned with the UI's full competitor set.
         competitors = self.load_competitors(sector)
         raw_signals: list[dict[str, Any]] = []
         provider_errors: list[Exception] = []
 
+        all_tasks = []
         for competitor in competitors:
-            tasks = [
+            all_tasks.extend([
                 self.fetch_tavily_news(competitor),
                 self.fetch_hn_signals(competitor),
                 self.fetch_hiring_signals(competitor),
                 self.fetch_pricing_page(competitor),
-            ]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            for result in results:
-                if isinstance(result, Exception):
-                    provider_errors.append(result)
-                else:
-                    raw_signals.extend(result)
+            ])
+            
+        results = await asyncio.gather(*all_tasks, return_exceptions=True)
+        for result in results:
+            if isinstance(result, Exception):
+                provider_errors.append(result)
+            elif result:
+                raw_signals.extend(result)
 
         if provider_errors:
             _ = ExceptionGroup("market_signal_collection_errors", provider_errors)
@@ -371,6 +375,8 @@ class MarketAgent:
             for item in classified
         ]
 
+        # Re-runs for the same run_id should replace the market snapshot, not duplicate it.
+        await session.execute(delete(MarketSignal).where(MarketSignal.run_id == run_id))
         session.add_all(entities)
         await session.commit()
 

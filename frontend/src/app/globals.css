@@ -214,18 +214,25 @@
 
   /* ── Scroll-triggered section entrance — spring easing ─────────── */
   .section-enter {
-    opacity: 0;
-    transform: translateY(36px) scale(0.980);
-    filter: blur(6px);
-    transition:
-      opacity   0.75s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.75s cubic-bezier(0.16, 1, 0.3, 1),
-      filter    0.55s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 1;
+    transform: none;
+    filter: none;
+    will-change: transform, opacity, filter;
+  }
+  @keyframes sectionReveal {
+    from {
+      opacity: 0;
+      transform: translateY(18px) scale(0.992);
+      filter: blur(3px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
   }
   .section-enter.is-visible {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
+    animation: sectionReveal 0.48s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   /* Stagger delays */

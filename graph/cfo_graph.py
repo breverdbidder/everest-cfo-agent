@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 from collections import OrderedDict
 from typing import Annotated, Any, Literal
@@ -11,6 +12,7 @@ from langgraph.graph.message import add_messages
 
 from agents import AnalysisAgent, IngestionAgent, InsightWriterAgent, MarketAgent
 from api.database import DatabaseManager
+from api.streaming import publish_event
 
 # Python equivalent of addMessages reducer naming from the project spec.
 addMessages = add_messages
@@ -125,6 +127,8 @@ class CFOGraphRunner:
     async def _router_node(self, state: CFOState) -> dict[str, Any]:
         run_id = state.get("run_id") or uuid.uuid4()
         task = state.get("task", "analyze")
+        if task == "analyze":
+            await publish_event(run_id, "pipeline_started", progress=0, message="Pipeline execution started")
         return {
             "run_id": run_id,
             "task": task,
@@ -139,18 +143,31 @@ class CFOGraphRunner:
         if state.get("task") != "analyze":
             return {"needs_correction": False}
 
+        run_id = state["run_id"]
+        await asyncio.sleep(1.5)
+        await publish_event(run_id, "agent_started", progress=5, agent_name="IngestionAgent", message="Parsing financial records…")
+
         result = await self.ingestion_agent.ingest(
             filename=state["file_name"],
             file_bytes=state["file_bytes"],
-            run_id=state["run_id"],
+            run_id=run_id,
             corrected_rows=state.get("corrected_rows"),
         )
 
-        msg = (
-            "Validation passed and data is ready for persistence"
-            if not result["needs_correction"]
-            else "Validation failed; triggering self-correction cycle"
-        )
+        if not result["needs_correction"]:
+            row_count = len(result.get("validated_rows", []))
+            await asyncio.sleep(1.0)
+            await publish_event(
+                run_id, "agent_completed", progress=20, agent_name="IngestionAgent",
+                data={"row_count": row_count},
+                message=f"Parsed {row_count} financial records",
+            )
+            msg = "Validation passed and data is ready for persistence"
+        else:
+            await asyncio.sleep(1.0)
+            await publish_event(run_id, "agent_started", progress=10, agent_name="IngestionAgent", message="Validation failed — running LLM correction…")
+            msg = "Validation failed; triggering self-correction cycle"
+
         return {
             **result,
             "messages": [AIMessage(content=msg)],
@@ -176,18 +193,50 @@ class CFOGraphRunner:
         }
 
     async def _persist_raw_node(self, state: CFOState) -> dict[str, Any]:
+        run_id = state["run_id"]
+        await asyncio.sleep(1.0)
+        await publish_event(run_id, "agent_started", progress=22, agent_name="PersistAgent", message="Saving validated rows to database…")
         async with self.db_manager.session() as session:
             count = await self.ingestion_agent.persist(session, state.get("validated_rows", []))
+        await asyncio.sleep(0.5)
+        await publish_event(
+            run_id, "agent_completed", progress=30, agent_name="PersistAgent",
+            data={"persisted_count": count},
+            message=f"Persisted {count} rows",
+        )
         return {
             "persisted_count": count,
             "messages": [AIMessage(content=f"Persisted {count} raw financial rows")],
         }
 
     async def _analysis_node(self, state: CFOState) -> dict[str, Any]:
+        run_id = state["run_id"]
+        await asyncio.sleep(1.5)
+        await publish_event(
+            run_id, "agent_started", progress=32, agent_name="AnalysisAgent",
+            message="Computing KPIs, IsolationForest anomalies, Monte Carlo simulations…",
+        )
         async with self.db_manager.session() as session:
-            result = await self.analysis_agent.run(session, state["run_id"])
+            result = await self.analysis_agent.run(session, run_id)
+        kpis = result.get("kpis", {})
+        anomaly_count = len(result.get("anomalies", []))
+        await asyncio.sleep(1.0)
+        await publish_event(
+            run_id, "agent_started", progress=50, agent_name="AnalysisAgent",
+            message="Isolating financial anomalies…",
+        )
+        await asyncio.sleep(1.0)
+        await publish_event(
+            run_id, "agent_completed", progress=75, agent_name="AnalysisAgent",
+            data={
+                "mrr": kpis.get("mrr"),
+                "gross_margin": kpis.get("gross_margin"),
+                "anomaly_count": anomaly_count,
+            },
+            message=f"KPIs computed — MRR ${kpis.get('mrr', 0):,.0f}, {anomaly_count} anomalies detected",
+        )
         return {
-            "kpis": result["kpis"],
+            "kpis": kpis,
             "anomalies": result["anomalies"],
             "survival_analysis": result.get("survival_analysis"),
             "scenario_analysis": result.get("scenario_analysis"),
@@ -197,16 +246,26 @@ class CFOGraphRunner:
 
     async def _market_analyze_node(self, state: CFOState) -> dict[str, Any]:
         """Light market scan that runs during every analyze — sector-aware."""
+        run_id = state["run_id"]
+        await asyncio.sleep(1.0)
+        await publish_event(run_id, "agent_started", progress=77, agent_name="MarketAgent", message="Scanning competitor signals…")
         async with self.db_manager.session() as session:
             result = await self.market_agent.run(
                 session,
-                state["run_id"],
+                run_id,
                 sector=state.get("sector"),
                 company_name=state.get("company_name"),
             )
+        signal_count = len(result["market_signals"])
+        await asyncio.sleep(1.0)
+        await publish_event(
+            run_id, "agent_completed", progress=95, agent_name="MarketAgent",
+            data={"signal_count": signal_count},
+            message=f"Market scan complete — {signal_count} competitor signals",
+        )
         return {
             "market_signals": result["market_signals"],
-            "messages": [AIMessage(content=f"Market scan complete — {len(result['market_signals'])} signals")],
+            "messages": [AIMessage(content=f"Market scan complete — {signal_count} signals")],
         }
 
     async def _market_node(self, state: CFOState) -> dict[str, Any]:
@@ -243,6 +302,9 @@ class CFOGraphRunner:
         }
 
     async def _failure_node(self, state: CFOState) -> dict[str, Any]:
+        run_id = state.get("run_id")
+        if run_id:
+            await publish_event(run_id, "pipeline_error", progress=0, message="Validation failed after correction retries")
         return {
             "status": "failed",
             "error": "Validation failed after correction retries",
@@ -273,7 +335,18 @@ class CFOGraphRunner:
             config={"recursion_limit": 25, "configurable": {"thread_id": str(effective_run_id)}},
         )
         if final_state.get("status") == "failed":
+            await publish_event(effective_run_id, "pipeline_error", progress=0, message=final_state.get("error", "Pipeline failed"))
             raise ValueError(final_state.get("error", "Analyze workflow failed"))
+        await publish_event(
+            effective_run_id, "pipeline_completed", progress=100,
+            message="Analysis complete — dashboard ready",
+            data={
+                "survival_analysis": final_state.get("survival_analysis"),
+                "scenario_analysis": final_state.get("scenario_analysis"),
+                "company_name": company_name,
+                "sector": sector,
+            },
+        )
         return final_state
 
     async def run_report(self, *, run_id: uuid.UUID) -> dict[str, Any]:

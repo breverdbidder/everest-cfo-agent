@@ -1,4 +1,5 @@
 import type {
+  AnalysisSummaryData,
   AgentCycleResult,
   AgentStatus,
   AnalyzeResponse,
@@ -15,6 +16,7 @@ import type {
   BoardPrepResponse,
   ReportData,
   CompetitorProfile,
+  SavedScenarioRecord,
   VCMemoData,
   PreMortemScenario,
   ChatMessage,
@@ -111,6 +113,41 @@ export async function getReport(runId: string): Promise<ReportData> {
 /** Get full KPI time series for a run (all weekly snapshots) */
 export async function getKPISeries(runId: string): Promise<import("./types").KPISnapshot[]> {
   return apiFetch(`/runs/${runId}/kpis`);
+}
+
+/** Get recomputed survival + scenario outputs for a run */
+export async function getAnalysisSummary(runId: string): Promise<AnalysisSummaryData> {
+  return apiFetch(`/runs/${runId}/analysis-summary`);
+}
+
+/** Get backend-persisted decision scenarios for a run */
+export async function getSavedScenarios(runId: string): Promise<SavedScenarioRecord[]> {
+  return apiFetch(`/runs/${runId}/saved-scenarios`);
+}
+
+/** Persist a decision scenario for a run */
+export async function saveScenario(
+  runId: string,
+  payload: {
+    label: string;
+    simulation_id: string;
+    summary?: string | null;
+    runway_months_before: number;
+    runway_months_after: number;
+    weekly_impact: number;
+    proof_points: string[];
+  },
+): Promise<SavedScenarioRecord> {
+  return apiFetch(`/runs/${runId}/saved-scenarios`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+/** Delete a persisted decision scenario */
+export async function deleteSavedScenario(runId: string, scenarioId: string): Promise<void> {
+  await apiFetch(`/runs/${runId}/saved-scenarios/${scenarioId}`, { method: "DELETE" });
 }
 
 /** Get all anomalies for a run */

@@ -190,7 +190,7 @@ Demo: localhost:3000 (run locally!)
 
 ## Accounts to tag/notify
 
-- @AnthropicAI (built with Claude)
+- @AnthropicAI
 - @LangChainAI (LangGraph)
 - @vercel (Next.js)
 - Any founder friends who'd share
