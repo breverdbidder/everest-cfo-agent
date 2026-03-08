@@ -5,7 +5,7 @@
 
 > **The AI CFO that 99% of startups can't afford - now open source.**
 
-Drop a CSV of weekly transactions and get a board-ready finance cockpit in ~30 seconds: a live **Financial Health Score**, KPI command center, runway and Monte Carlo survival analysis, competitor intel, AI reports, and a new **AI CFO Decision Engine** that recommends actions, simulates impact across the dashboard, saves scenarios, and exports a shareable board snapshot. Optimized for low-cost inference at **~$0.003 per run**, with the decision layer itself running rules-first to avoid extra API spend.
+Drop a CSV of weekly transactions and get a board-ready finance cockpit in about 30 seconds: a live **Financial Health Score**, KPI command center, runway and Monte Carlo survival analysis, competitor intel, AI reports, and a new **AI CFO Decision Engine** that recommends actions, simulates impact across the dashboard, saves scenarios, and exports a shareable board snapshot. Optimized for low-cost inference at **$0.003 per run**, with the decision layer itself running rules-first to avoid extra API spend.
 
 ---
 
