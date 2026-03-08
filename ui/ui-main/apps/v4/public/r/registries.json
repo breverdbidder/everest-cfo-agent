@@ -51,7 +51,7 @@
     "name": "@aevr",
     "homepage": "https://ui.aevr.space",
     "url": "https://ui.aevr.space/r/{name}.json",
-    "description": "A small collection of focused, production‑ready components and primitives for React/Next.js projects—built on shadcn/ui and complementary libraries."
+    "description": "A small collection of focused, production‑ready components and primitives for React/Next.js projects-built on shadcn/ui and complementary libraries."
   },
   {
     "name": "@ai-blocks",
@@ -171,7 +171,7 @@
     "name": "@cult-ui",
     "homepage": "https://www.cult-ui.com",
     "url": "https://cult-ui.com/r/{name}.json",
-    "description": "Cult UI is a rare, curated set of shadcn-compatible, headless and composable components—tastefully animated with Framer Motion."
+    "description": "Cult UI is a rare, curated set of shadcn-compatible, headless and composable components-tastefully animated with Framer Motion."
   },
   {
     "name": "@diceui",
@@ -405,7 +405,7 @@
     "name": "@paykit-sdk",
     "homepage": "https://www.usepaykit.dev",
     "url": "https://www.usepaykit.dev/r/{name}.json",
-    "description": "Unified payments SDK for builders — handle checkout, billing, and webhooks across Stripe, PayPal, Adyen, and regional gateways with a single integration."
+    "description": "Unified payments SDK for builders - handle checkout, billing, and webhooks across Stripe, PayPal, Adyen, and regional gateways with a single integration."
   },
   {
     "name": "@plate",
@@ -543,7 +543,7 @@
     "name": "@smoothui",
     "homepage": "https://smoothui.dev",
     "url": "https://smoothui.dev/r/{name}.json",
-    "description": "A collection of beautifully crafted motion components built with React, Framer Motion, and TailwindCSS. Designed to elevate microinteractions, each component focuses on smooth animations, subtle feedback, and delightful UX. Perfect for designers and developers who want to add refined motion to their interfaces — copy, paste, and make your UI come alive."
+    "description": "A collection of beautifully crafted motion components built with React, Framer Motion, and TailwindCSS. Designed to elevate microinteractions, each component focuses on smooth animations, subtle feedback, and delightful UX. Perfect for designers and developers who want to add refined motion to their interfaces - copy, paste, and make your UI come alive."
   },
   {
     "name": "@spectrumui",
@@ -633,7 +633,7 @@
     "name": "@ui-layouts",
     "homepage": "https://ui-layouts.com/",
     "url": "https://ui-layouts.com/r/{name}.json",
-    "description": "UI Layouts offers components, effects, design tools, and ready-made blocks that make building modern interfaces more efficient—built with React, Next.js, Tailwind CSS, and shadcn/ui."
+    "description": "UI Layouts offers components, effects, design tools, and ready-made blocks that make building modern interfaces more efficient-built with React, Next.js, Tailwind CSS, and shadcn/ui."
   },
   {
     "name": "@pureui",
@@ -681,7 +681,7 @@
     "name": "@shadcn-dashboard",
     "homepage": "https://shadcn-dashboard.com",
     "url": "https://shadcn-dashboard.com/r/{name}.json",
-    "description": "ShadcnDashboard is a collection of modern, production-ready dashboard layouts, components, and UI patterns built on top of shadcn/ui and Tailwind CSS. It’s designed to help developers build clean, scalable, and data-driven dashboards faster—without compromising on performance, accessibility, or customization."
+    "description": "ShadcnDashboard is a collection of modern, production-ready dashboard layouts, components, and UI patterns built on top of shadcn/ui and Tailwind CSS. It’s designed to help developers build clean, scalable, and data-driven dashboards faster-without compromising on performance, accessibility, or customization."
   },
   {
     "name": "@icons-animated",
@@ -717,7 +717,7 @@
     "name": "@lumiui",
     "homepage": "https://www.lumiui.dev",
     "url": "https://www.lumiui.dev/r/{name}.json",
-    "description": "Composable React components powered by Base UI and Tailwind CSS — Build fast, customize everything."
+    "description": "Composable React components powered by Base UI and Tailwind CSS - Build fast, customize everything."
   },
   {
     "name": "@uselayouts",

@@ -59,7 +59,7 @@ export function IndustryBenchmarker({ data }: Props) {
 
   const metrics = Object.keys(benchmarks).filter(m => m in METRIC_LABELS);
 
-  // Build radar data — use percentile as the "score" for each dimension
+  // Build radar data - use percentile as the "score" for each dimension
   const radarData = metrics.map(m => ({
     metric: METRIC_LABELS[m] ?? m,
     you:    percentiles[m] ?? 0,
@@ -173,7 +173,7 @@ export function IndustryBenchmarker({ data }: Props) {
       </div>
 
       <p className="text-[10px] text-gray-400 text-center">
-        Percentile scores are anonymized — your data is never shared with peers.
+        Percentile scores are anonymized - your data is never shared with peers.
       </p>
     </div>
   );

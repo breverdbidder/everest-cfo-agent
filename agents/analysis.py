@@ -33,7 +33,7 @@ class ChronosBounds:
 
 class Chronos2Forecaster:
     _pipeline: Any = None
-    # Prediction cache keyed on MD5 of (series_values, horizon) — avoids re-inference on retries
+    # Prediction cache keyed on MD5 of (series_values, horizon) - avoids re-inference on retries
     _forecast_cache: dict[str, ChronosBounds] = {}
 
     def __init__(self, enabled: bool = True) -> None:
@@ -451,10 +451,10 @@ def compute_survival_analysis(
 
     Runs 1,000 scenarios with randomized weekly cash flows to produce a probability
     distribution of when the company hits zero cash. Returns a Survival Score (0-100)
-    and a Fundraising Deadline — the date by which fundraising conversations must start
+    and a Fundraising Deadline - the date by which fundraising conversations must start
     to ensure 12 months of runway at close.
 
-    No external API calls — uses numpy only.
+    No external API calls - uses numpy only.
     """
     if len(snapshots) < 3:
         return {}
@@ -537,7 +537,7 @@ def compute_survival_analysis(
 def compute_scenario_stress_test(snapshots: list[KPISnapshotRecord]) -> list[dict[str, Any]]:
     """Three-scenario financial stress test: Bear / Base / Bull.
 
-    Pure arithmetic on KPI snapshots — zero API calls, sub-millisecond execution.
+    Pure arithmetic on KPI snapshots - zero API calls, sub-millisecond execution.
 
     Bear:  Top customer churns (MRR -20%), expenses up 15%
     Base:  Current trajectory continues for 6 months
@@ -629,7 +629,7 @@ def compute_scenario_stress_test(snapshots: list[KPISnapshotRecord]) -> list[dic
             recommended_actions = [
                 "Invest in sales capacity now to capture the growth window",
                 "Build 6-month cash reserve before Series A to negotiate from strength",
-                "Instrument product for expansion revenue — NRR above 120% unlocks premium multiples",
+                "Instrument product for expansion revenue - NRR above 120% unlocks premium multiples",
             ]
 
         scenarios.append(
@@ -672,7 +672,7 @@ def detect_fraud_patterns(
 
     alerts: list[FraudAlertRecord] = []
 
-    # Rule 1: round_number — expense amounts exactly divisible by 1000 (>= $1000)
+    # Rule 1: round_number - expense amounts exactly divisible by 1000 (>= $1000)
     for row in rows:
         if row.category in EXPENSE_CATS:
             continue
@@ -691,7 +691,7 @@ def detect_fraud_patterns(
                 ),
             ))
 
-    # Rule 2: velocity_spike — weekly category total > 3× 8-week rolling median
+    # Rule 2: velocity_spike - weekly category total > 3× 8-week rolling median
     for cat, totals in cat_weekly.items():
         if len(totals) < 4:
             continue
@@ -716,7 +716,7 @@ def detect_fraud_patterns(
                     ),
                 ))
 
-    # Rule 3: duplicate_amount — same amount + category 2+ times in same week
+    # Rule 3: duplicate_amount - same amount + category 2+ times in same week
     for wk in sorted_weeks:
         for cat, amts in weekly[wk].items():
             seen: dict[str, int] = {}
@@ -738,7 +738,7 @@ def detect_fraud_patterns(
                         ),
                     ))
 
-    # Rule 4: zero_revenue_week — zero revenue but above-median expenses
+    # Rule 4: zero_revenue_week - zero revenue but above-median expenses
     all_expense_totals = [
         sum(abs(a) for cat, amts in weekly[wk].items()
             if cat not in EXPENSE_CATS for a in amts)
@@ -766,7 +766,7 @@ def detect_fraud_patterns(
                     ),
                 ))
 
-    # Rule 5: contractor_ratio — contractor > 2.5× salary in a week
+    # Rule 5: contractor_ratio - contractor > 2.5× salary in a week
     for wk in sorted_weeks:
         contractor = abs(sum(weekly[wk].get("contractor_expense", [])))
         salary = abs(sum(weekly[wk].get("salary_expense", [])))

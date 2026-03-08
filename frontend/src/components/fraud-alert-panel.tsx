@@ -225,7 +225,7 @@ export function FraudAlertPanel({ alerts }: Props) {
         </div>
       )}
 
-      {/* LOW alerts — collapsed */}
+      {/* LOW alerts - collapsed */}
       {lowAlerts.length > 0 && (
         <>
           <button

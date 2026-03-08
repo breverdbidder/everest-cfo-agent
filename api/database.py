@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 # ---------------------------------------------------------------------------
-# Engine & session factory — module-level singletons
+# Engine & session factory - module-level singletons
 # ---------------------------------------------------------------------------
 
 _engine = None
@@ -29,13 +29,13 @@ def _build_url() -> str:
 
     Priority:
       1. DATABASE_URL env var (PostgreSQL via asyncpg or SQLite via aiosqlite)
-      2. Local SQLite fallback — zero-config for local development
+      2. Local SQLite fallback - zero-config for local development
     """
     url = os.getenv("DATABASE_URL", "")
     if not url:
         return f"sqlite+aiosqlite:///{_DEFAULT_DB}"
 
-    # Render / Heroku often set postgresql:// — upgrade to asyncpg driver
+    # Render / Heroku often set postgresql:// - upgrade to asyncpg driver
     if url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
     # Some providers set postgres:// (Heroku legacy)
@@ -73,7 +73,7 @@ def _get_session_factory():
 
 
 # ---------------------------------------------------------------------------
-# DatabaseManager — used by CFOGraphRunner and API lifespan
+# DatabaseManager - used by CFOGraphRunner and API lifespan
 # ---------------------------------------------------------------------------
 
 
@@ -119,7 +119,7 @@ def get_db_manager() -> DatabaseManager:
 
 
 async def init_db() -> None:
-    """Create all tables (idempotent — safe to call on every startup)."""
+    """Create all tables (idempotent - safe to call on every startup)."""
     from api.models import Base
 
     engine = _get_engine()

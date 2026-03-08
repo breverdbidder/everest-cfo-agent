@@ -1,4 +1,4 @@
-"""Morning CFO Briefing — proactive daily financial summary for founders."""
+"""Morning CFO Briefing - proactive daily financial summary for founders."""
 from __future__ import annotations
 
 import uuid
@@ -94,12 +94,12 @@ async def generate_morning_briefing(
             f"(${prev_burn:,.0f} → ${burn:,.0f}/wk)"
         )
     if runway_months < 3:
-        urgent.append(f"CRITICAL: only {runway_months:.1f} months runway — act now")
+        urgent.append(f"CRITICAL: only {runway_months:.1f} months runway - act now")
     elif runway_months < 6:
-        urgent.append(f"Runway at {runway_months:.1f} months — begin fundraising conversations")
+        urgent.append(f"Runway at {runway_months:.1f} months - begin fundraising conversations")
 
     if churn > 0.05:
-        urgent.append(f"Churn elevated at {churn*100:.1f}%/wk — review at-risk accounts")
+        urgent.append(f"Churn elevated at {churn*100:.1f}%/wk - review at-risk accounts")
 
     for fa in fraud_rows[:2]:
         urgent.append(
@@ -127,9 +127,9 @@ async def generate_morning_briefing(
     if gm > 0.65:
         good_news.append(f"Gross margin strong at {gm*100:.0f}%")
     if ltv_cac >= 3:
-        good_news.append(f"LTV:CAC healthy at {ltv_cac:.1f}x — unit economics solid")
+        good_news.append(f"LTV:CAC healthy at {ltv_cac:.1f}x - unit economics solid")
     if burn_change_pct < -5:
-        good_news.append(f"Burn reduced {abs(burn_change_pct):.0f}% this week — efficiency improving")
+        good_news.append(f"Burn reduced {abs(burn_change_pct):.0f}% this week - efficiency improving")
 
     # ── Generate action items with Claude Haiku ────────────────────────────
     actions = await _generate_actions(
@@ -219,7 +219,7 @@ def _empty_briefing(company_name: str) -> dict[str, Any]:
         "gross_margin_pct": 0.0,
         "churn_pct":       0.0,
         "ltv_cac":         0.0,
-        "urgent":          ["No financial data — upload a CSV to get started"],
+        "urgent":          ["No financial data - upload a CSV to get started"],
         "good_news":       [],
         "actions": [
             "Upload your transaction CSV to generate financial insights",

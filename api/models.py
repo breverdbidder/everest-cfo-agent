@@ -174,7 +174,7 @@ class CashFlowForecast(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     run_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, index=True)
-    week_offset: Mapped[int] = mapped_column(Integer, nullable=False)  # 1–13
+    week_offset: Mapped[int] = mapped_column(Integer, nullable=False)  # 1-13
     week_start: Mapped[date] = mapped_column(Date, nullable=False)
     predicted_balance_p10: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     predicted_balance_p50: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)

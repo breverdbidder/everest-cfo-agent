@@ -171,21 +171,21 @@ export function AnomalyTable({ anomalies }: Props) {
         </div>
       </div>
 
-      {/* HIGH anomalies — always visible */}
+      {/* HIGH anomalies - always visible */}
       {highAnoms.length > 0 && (
         <div className="space-y-2 mb-3">
           {highAnoms.map((a, i) => <AnomalyCard key={i} anomaly={a} />)}
         </div>
       )}
 
-      {/* MEDIUM anomalies — always visible */}
+      {/* MEDIUM anomalies - always visible */}
       {medAnoms.length > 0 && (
         <div className="space-y-2 mb-3">
           {medAnoms.map((a, i) => <AnomalyCard key={i} anomaly={a} />)}
         </div>
       )}
 
-      {/* LOW anomalies — collapsed */}
+      {/* LOW anomalies - collapsed */}
       {lowAnoms.length > 0 && (
         <>
           <button

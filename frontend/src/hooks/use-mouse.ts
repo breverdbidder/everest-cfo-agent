@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 
 interface MouseState {
-  /** Normalised –1 → +1 relative to viewport center */
+  /** Normalised -1 → +1 relative to viewport center */
   x: number;
   y: number;
   /** Raw pixel position */

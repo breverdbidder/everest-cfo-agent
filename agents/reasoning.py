@@ -1,5 +1,5 @@
 """
-reasoning.py — ReasoningEngine
+reasoning.py - ReasoningEngine
 
 Uses Claude Haiku with tool_use to analyze a financial observation and decide
 what action (if any) to take. Claude picks from three tools:
@@ -30,18 +30,18 @@ Your job:
 1. Analyze the current financial snapshot
 2. Detect threats before they become critical
 3. Decide what action to take (or do nothing if all is well)
-4. Be proactive but not alarmist — only fire alerts for genuine issues
+4. Be proactive but not alarmist - only fire alerts for genuine issues
 
 Decision framework:
 - Runway < 3 months → CRITICAL (create_action_plan: critical_runway)
-- Runway 3–6 months → WARNING (create_action_plan: warning_runway)
+- Runway 3-6 months → WARNING (create_action_plan: warning_runway)
 - Burn spike > 20% WoW with runway < 9 months → (create_action_plan: burn_spike)
 - HIGH fraud alerts > 0 → (create_action_plan: fraud_detected)
 - HIGH anomalies > 1 → (create_action_plan: anomaly_high)
 - Everything looks fine → do_nothing
 
 You MUST call exactly one tool. Do not output text outside of the tool call.
-Be concise in your reasoning — 1–2 sentences max.
+Be concise in your reasoning - 1-2 sentences max.
 """
 
 AGENT_TOOLS = [
@@ -232,7 +232,7 @@ class ReasoningEngine:
                 tool_name="create_action_plan",
                 tool_input={
                     "plan_type": "critical_runway",
-                    "reasoning": f"Runway at {obs.runway_months:.1f} months — critical threshold.",
+                    "reasoning": f"Runway at {obs.runway_months:.1f} months - critical threshold.",
                 },
             )
         if obs.runway_months < 6:
@@ -240,7 +240,7 @@ class ReasoningEngine:
                 tool_name="create_action_plan",
                 tool_input={
                     "plan_type": "warning_runway",
-                    "reasoning": f"Runway at {obs.runway_months:.1f} months — begin fundraising.",
+                    "reasoning": f"Runway at {obs.runway_months:.1f} months - begin fundraising.",
                 },
             )
         if obs.burn_change_pct > 20 and obs.runway_months < 9:

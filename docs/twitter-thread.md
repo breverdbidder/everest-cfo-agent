@@ -1,4 +1,4 @@
-# Twitter / X Thread — Launch Copy
+# Twitter / X Thread - Launch Copy
 
 ## Thread (post as a reply chain from tweet 1)
 
@@ -6,7 +6,7 @@
 
 ---
 
-**Tweet 1** *(main post — attach pipeline video or dashboard screenshot)*
+**Tweet 1** *(main post - attach pipeline video or dashboard screenshot)*
 
 Just launched AI CFO Agent on Product Hunt 🚀
 

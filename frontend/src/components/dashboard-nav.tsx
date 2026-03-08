@@ -95,7 +95,7 @@ export function DashboardNav({
       id: "sec-kpi",
       label: "KPIs",
       icon: "📊",
-      getValue: () => latest ? fmtK(latest.mrr) : "—",
+      getValue: () => latest ? fmtK(latest.mrr) : "-",
       getSub: () => "MRR / week",
       gradient: "from-blue-50 to-blue-100",
       border: "border-blue-200",
@@ -139,7 +139,7 @@ export function DashboardNav({
       id: "sec-revenue",
       label: "Survival",
       icon: "📈",
-      getValue: () => survival ? `${survival.score}/100` : "—",
+      getValue: () => survival ? `${survival.score}/100` : "-",
       getSub: () => survival?.label.replace("_", " ") ?? "Monte Carlo",
       gradient: "from-emerald-50 to-emerald-100",
       border: "border-emerald-200",
@@ -150,7 +150,7 @@ export function DashboardNav({
       id: "sec-intel",
       label: "Intel",
       icon: "🔭",
-      getValue: () => signalCount > 0 ? `${signalCount} signals` : "—",
+      getValue: () => signalCount > 0 ? `${signalCount} signals` : "-",
       getSub: () => "competitor intel",
       gradient: "from-orange-50 to-orange-100",
       border: "border-orange-200",
@@ -161,7 +161,7 @@ export function DashboardNav({
       id: "sec-scenarios",
       label: "Scenarios",
       icon: "🎯",
-      getValue: () => baseScenario ? `${baseScenario.months_runway.toFixed(1)}mo` : "—",
+      getValue: () => baseScenario ? `${baseScenario.months_runway.toFixed(1)}mo` : "-",
       getSub: () => "Base runway",
       gradient: "from-amber-50 to-amber-100",
       border: "border-amber-200",
@@ -172,7 +172,7 @@ export function DashboardNav({
       id: "sec-deepdive",
       label: "Deep Dive",
       icon: "🔬",
-      getValue: () => latest ? fmtPct(Math.abs(latest.gross_margin)) : "—",
+      getValue: () => latest ? fmtPct(Math.abs(latest.gross_margin)) : "-",
       getSub: () => "gross margin",
       gradient: "from-indigo-50 to-indigo-100",
       border: "border-indigo-200",
@@ -183,7 +183,7 @@ export function DashboardNav({
       id: "sec-customers",
       label: "Customers",
       icon: "👥",
-      getValue: () => customerCount > 0 ? `${customerCount}` : "—",
+      getValue: () => customerCount > 0 ? `${customerCount}` : "-",
       getSub: () => "active accounts",
       gradient: "from-violet-50 to-violet-100",
       border: "border-violet-200",
@@ -216,7 +216,7 @@ export function DashboardNav({
       id: "sec-fundraising",
       label: "Fundraising",
       icon: "🚀",
-      getValue: () => fundraisingScore !== null ? `${fundraisingScore}/100` : "—",
+      getValue: () => fundraisingScore !== null ? `${fundraisingScore}/100` : "-",
       getSub: () =>
         fundraisingScore !== null
           ? fundraisingScore >= 75 ? "Series A Ready" : fundraisingScore >= 50 ? "6 Months" : "Not Ready"
@@ -253,9 +253,9 @@ export function DashboardNav({
   return (
     <div className="sticky top-[54px] z-30 bg-white/95 backdrop-blur-xl border-b border-gray-100 shadow-sm">
       <div className="mx-auto max-w-screen-xl px-4 sm:px-6 relative">
-        {/* Gradient fade — left edge */}
+        {/* Gradient fade - left edge */}
         <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white/95 to-transparent z-10 sm:left-6" />
-        {/* Gradient fade — right edge */}
+        {/* Gradient fade - right edge */}
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/95 to-transparent z-10 sm:right-6" />
 
         <div className="flex gap-1.5 overflow-x-auto py-2 no-scrollbar px-2">

@@ -2,11 +2,11 @@
 WebSocket streaming infrastructure for real-time pipeline updates.
 
 Event types:
-  pipeline_started   — Pipeline execution began
-  agent_started      — Individual agent started processing
-  agent_completed    — Agent finished, data available
-  pipeline_completed — All agents finished
-  pipeline_error     — Error occurred
+  pipeline_started   - Pipeline execution began
+  agent_started      - Individual agent started processing
+  agent_completed    - Agent finished, data available
+  pipeline_completed - All agents finished
+  pipeline_error     - Error occurred
 """
 
 from __future__ import annotations
@@ -59,7 +59,7 @@ class ConnectionManager:
             self.disconnect(run_id, ws)
 
 
-# Module-level singleton — imported by graph nodes and the WebSocket endpoint.
+# Module-level singleton - imported by graph nodes and the WebSocket endpoint.
 manager = ConnectionManager()
 
 
@@ -73,7 +73,7 @@ async def publish_event(
 ) -> None:
     """Publish a pipeline event to all WebSocket clients watching this run_id.
 
-    Safe to call even when no client is connected — broadcasts are no-ops
+    Safe to call even when no client is connected - broadcasts are no-ops
     when the run_id has no active connections.
     """
     run_id_str = str(run_id)

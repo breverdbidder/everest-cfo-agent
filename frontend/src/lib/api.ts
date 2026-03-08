@@ -160,12 +160,12 @@ export async function getSignals(runId: string): Promise<import("./types").Marke
   return apiFetch(`/runs/${runId}/signals`);
 }
 
-/** Get competitor profiles for a sector — Wikipedia + Clearbit logos, fully free */
+/** Get competitor profiles for a sector - Wikipedia + Clearbit logos, fully free */
 export async function getSectorCompetitors(sector: string): Promise<CompetitorProfile[]> {
   return apiFetch(`/sectors/${sector}/competitors`);
 }
 
-/** Generate a ready-to-send monthly investor update email — uses Claude Haiku (~$0.003/call) */
+/** Generate a ready-to-send monthly investor update email - uses Claude Haiku (~$0.003/call) */
 export async function getInvestorUpdate(
   runId: string,
   monthsRunway: number,
@@ -186,7 +186,7 @@ export async function getInvestorUpdate(
   });
 }
 
-/** Generate a VC investment committee memo — uses Claude Haiku (~$0.003/call) */
+/** Generate a VC investment committee memo - uses Claude Haiku (~$0.003/call) */
 export async function getVCMemo(
   runId: string,
   monthsRunway: number,
@@ -422,7 +422,7 @@ export async function getAgentActions(
   return apiFetch(`/agent/${runId}/actions?limit=${limit}`);
 }
 
-/** Approve a pending agent action — triggers immediate execution */
+/** Approve a pending agent action - triggers immediate execution */
 export async function approveAgentAction(
   actionId: string,
 ): Promise<{ action_id: string; status: string; result: Record<string, unknown> }> {

@@ -1,9 +1,9 @@
 """
-agent_memory.py — AgentMemory
+agent_memory.py - AgentMemory
 
 Persistent memory for the autonomous CFO agent using PostgreSQL.
 Stores observations, plans, and action outcomes for learning.
-No vector DB required — uses SQL aggregation for success rate tracking.
+No vector DB required - uses SQL aggregation for success rate tracking.
 """
 
 from __future__ import annotations

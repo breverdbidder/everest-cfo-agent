@@ -284,7 +284,7 @@ export default function RunPage() {
     }
   }, [runId]);
 
-  // Initial load — may return empty results if pipeline is still running.
+  // Initial load - may return empty results if pipeline is still running.
   useEffect(() => { loadDashboardData(); }, [loadDashboardData]);
 
   // Re-fetch full data once pipeline_completed fires via WebSocket/polling.
@@ -1194,7 +1194,7 @@ export default function RunPage() {
                             <p className="text-sm text-gray-500 leading-relaxed mb-1">
                               Identifies the 3 most likely ways your company fails in the next 6 months, with specific warning signs and prevention actions grounded in your real KPIs.
                             </p>
-                            <p className="text-[11px] text-gray-400">Brutal, specific, and actionable — not generic startup advice.</p>
+                            <p className="text-[11px] text-gray-400">Brutal, specific, and actionable - not generic startup advice.</p>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-3 py-1">~$0.004 · Claude Haiku</span>
@@ -1335,7 +1335,7 @@ export default function RunPage() {
                         const hasDeferredRevenue = true; // we have the module
                         const items = [
                           { label: "Revenue Recognition (ASC 606)", status: hasDeferredRevenue ? "PASS" : "REVIEW", note: "Deferred revenue module active" },
-                          { label: "Contractor vs Employee Ratio (1099 Risk)", status: contractorRisk ? "REVIEW" : "PASS", note: contractorRisk ? "Contractor ratio > 2.5x salary — potential misclassification" : "Contractor ratios within norms" },
+                          { label: "Contractor vs Employee Ratio (1099 Risk)", status: contractorRisk ? "REVIEW" : "PASS", note: contractorRisk ? "Contractor ratio > 2.5x salary - potential misclassification" : "Contractor ratios within norms" },
                           { label: "Round-Number Transaction Audit", status: roundNums > 2 ? "FAIL" : roundNums > 0 ? "REVIEW" : "PASS", note: `${roundNums} round-number transactions detected` },
                           { label: "Data Completeness (No Revenue Gaps)", status: hasGaps ? "REVIEW" : "PASS", note: hasGaps ? "Gaps detected in weekly reporting" : "No data gaps found" },
                           { label: "High-Severity Financial Anomalies", status: highFrauds > 0 ? "REVIEW" : "PASS", note: `${highFrauds} high-severity patterns flagged` },

@@ -24,7 +24,7 @@ function ImpactChip({ delta }: { delta: number }) {
 }
 
 // ── Horizontal fuel gauge ─────────────────────────────────────────────────
-// Red 0–3m · Amber 3–6m · Green 6–24m
+// Red 0-3m · Amber 3-6m · Green 6-24m
 // White dim overlay fades the "future" portion after current position.
 // Thumb dot slides to show current position.
 function RunwayBar({
@@ -53,7 +53,7 @@ function RunwayBar({
           <div className="h-full flex-1 bg-green-300/70" />
         </div>
 
-        {/* Dim overlay — fades everything after current position */}
+        {/* Dim overlay - fades everything after current position */}
         <div
           className="absolute top-0 bottom-0 rounded-r-full"
           style={{ left: `${pct}%`, right: 0, background: "rgba(255,255,255,0.78)" }}
@@ -256,7 +256,7 @@ export function RunwayExplorer({ monthsRunway, latestBurn = 0, latestMRR = 0 }: 
             <span className="flex-shrink-0">{isRed ? "⚡" : isAmber ? "⚠️" : "💡"}</span>
             <span>
               {isRed
-                ? "Critical — less than 90 days. Move the levers above to model emergency scenarios immediately."
+                ? "Critical - less than 90 days. Move the levers above to model emergency scenarios immediately."
                 : isAmber
                 ? "Begin fundraising conversations now. Use the levers to see how operational changes extend your runway."
                 : "Healthy runway. Drag the levers to explore what-if scenarios and find your optimal path."}

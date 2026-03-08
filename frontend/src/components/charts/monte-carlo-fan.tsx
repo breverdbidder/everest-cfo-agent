@@ -206,10 +206,10 @@ export function MonteCarloFan({ snapshots, scenarios, latestMRR }: Props) {
             ))}
           </g>
 
-          {/* P5–P95 band */}
+          {/* P5-P95 band */}
           <path d={areaD(p95v, p5v)} fill="url(#mcOuter)" clipPath="url(#chartClip)" />
 
-          {/* P25–P75 band */}
+          {/* P25-P75 band */}
           <path d={areaD(p75v, p25v)} fill="url(#mcInner)" clipPath="url(#chartClip)" />
 
           {/* P10 / P90 dashed boundary */}
@@ -218,7 +218,7 @@ export function MonteCarloFan({ snapshots, scenarios, latestMRR }: Props) {
           <path d={pathD(p10v)} stroke="#0071e3" strokeWidth={1} fill="none"
             opacity={0.2} strokeDasharray="3 5" clipPath="url(#chartClip)" />
 
-          {/* Median — animated draw */}
+          {/* Median - animated draw */}
           <path
             d={pathD(p50v)}
             stroke="#0071e3" strokeWidth={2.5} fill="none"

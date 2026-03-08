@@ -56,7 +56,7 @@ const REQUIRED_COLS = [
   { col: "date",        example: "2024-01-07",           note: "ISO 8601 or MM/DD/YYYY" },
   { col: "category",   example: "subscription_revenue",  note: "See valid categories below" },
   { col: "amount",     example: "12500.00",              note: "Positive = revenue, negative = expense" },
-  { col: "customer_id",example: "acme_corp",             note: "Optional — enables customer analytics" },
+  { col: "customer_id",example: "acme_corp",             note: "Optional - enables customer analytics" },
 ];
 
 function downloadTemplate() {
@@ -241,7 +241,7 @@ export default function HomePage() {
         if (!res.ok) throw new Error(`API error ${res.status}`);
       }
 
-      // Navigate immediately — WebSocket on the dashboard page streams real progress.
+      // Navigate immediately - WebSocket on the dashboard page streams real progress.
       router.push(`/run/${runId}`);
 
     } catch (e) {

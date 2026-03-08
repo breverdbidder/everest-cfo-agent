@@ -1,5 +1,5 @@
 """
-cash_flow_forecaster.py — 13-Week Rolling Cash Flow Forecast
+cash_flow_forecaster.py - 13-Week Rolling Cash Flow Forecast
 
 Generates P10/P50/P90 cash balance bands by combining:
   - Current cash balance (from CashBalance table or estimated)
@@ -66,7 +66,7 @@ class CashFlowForecaster:
         today = date.today()
         rng = np.random.default_rng(seed=42)
 
-        # Shape: (N_SIMULATIONS, N_WEEKS+1)  — week 0 is starting cash
+        # Shape: (N_SIMULATIONS, N_WEEKS+1)  - week 0 is starting cash
         paths = np.zeros((self.N_SIMULATIONS, self.N_WEEKS + 1))
         paths[:, 0] = current_cash
 

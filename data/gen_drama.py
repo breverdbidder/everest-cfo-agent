@@ -1,12 +1,12 @@
 """
-gen_drama.py — Generates a dramatic "SaaS Crisis & Recovery" demo dataset.
+gen_drama.py - Generates a dramatic "SaaS Crisis & Recovery" demo dataset.
 
 Story arc:
   Act 1 (Wks 01-12): Healthy growth, 0-0.5% churn, burn ~$18K/wk net
-  Act 2 (Wks 13-26): CRISIS — 3 enterprise churns, marketing panic, burn spikes to $45K/wk
-  Act 3 (Wks 27-38): Near-death — new mid-market wins trickle in, burn optimization
-  Act 4 (Wks 39-55): Recovery — 2 enterprise re-signs, MRR climbs back
-  Act 5 (Wks 56-78): Hypergrowth — 3 more enterprise wins, MRR hits ~$42K/wk
+  Act 2 (Wks 13-26): CRISIS - 3 enterprise churns, marketing panic, burn spikes to $45K/wk
+  Act 3 (Wks 27-38): Near-death - new mid-market wins trickle in, burn optimization
+  Act 4 (Wks 39-55): Recovery - 2 enterprise re-signs, MRR climbs back
+  Act 5 (Wks 56-78): Hypergrowth - 3 more enterprise wins, MRR hits ~$42K/wk
 
 Run: python data/gen_drama.py
 Outputs: data/sample_financials.csv
@@ -157,7 +157,7 @@ SMB_LATE_CHURNS = {
     8:  70,   # "scale_l"     joins wk 36, churns wk 70
     16: 74,   # SMB_BASE[16]  joins wk 44, churns wk 74
     23: 77,   # SMB_BASE[23]  joins wk 51, churns wk 77
-    31: 78,   # SMB_BASE[31]  joins wk 59, churns wk 78 (latest — shows in KPI)
+    31: 78,   # SMB_BASE[31]  joins wk 59, churns wk 78 (latest - shows in KPI)
 }
 
 smb_idx = 0
@@ -200,7 +200,7 @@ for churn_wk, items in churn_refunds.items():
         add(churn_wk, "churn_refund", -refund, cust_name)
 
 # ---------------------------------------------------------------------------
-# Expenses — story-driven
+# Expenses - story-driven
 # ---------------------------------------------------------------------------
 
 for wk in range(1, NUM_WEEKS + 1):
@@ -231,7 +231,7 @@ for wk in range(1, NUM_WEEKS + 1):
     if wk <= 12:
         marketing = jitter(5000 + wk * 100, 0.08)
     elif wk == 15:
-        marketing = 28000  # panic spike — 3× normal, ANOMALY
+        marketing = 28000  # panic spike - 3× normal, ANOMALY
     elif 13 <= wk <= 18:
         marketing = jitter(16000, 0.1)
     elif 19 <= wk <= 26:
@@ -241,11 +241,11 @@ for wk in range(1, NUM_WEEKS + 1):
         # lean mode
         marketing = jitter(6000, 0.07)
     else:
-        # growth mode — efficient spend
+        # growth mode - efficient spend
         marketing = jitter(7000 + (wk - 40) * 50, 0.07)
     add(wk, "marketing_expense", -marketing)
 
-# COGS: ~26-28% of subscription revenue — compute after revenue rows exist
+# COGS: ~26-28% of subscription revenue - compute after revenue rows exist
 # We'll compute it below after collecting total rev per week
 
 # --- Travel: sporadic ---

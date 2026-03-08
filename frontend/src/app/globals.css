@@ -104,7 +104,7 @@
     transform: translateY(-2px);
   }
 
-  /* ── 3D Tilt card — perspective hover effect ───────────────────── */
+  /* ── 3D Tilt card - perspective hover effect ───────────────────── */
   .tilt-card {
     transform-style: preserve-3d;
     transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
@@ -165,7 +165,7 @@
   }
   .animate-scale-in { animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-  /* KPI number pop — spring bounce */
+  /* KPI number pop - spring bounce */
   @keyframes numberPop {
     0%   { opacity: 0; transform: translateY(12px) scale(0.84); }
     55%  { transform: translateY(-4px) scale(1.08); }
@@ -212,7 +212,7 @@
     will-change: transform;
   }
 
-  /* ── Scroll-triggered section entrance — spring easing ─────────── */
+  /* ── Scroll-triggered section entrance - spring easing ─────────── */
   .section-enter {
     opacity: 1;
     transform: none;

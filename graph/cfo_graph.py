@@ -165,7 +165,7 @@ class CFOGraphRunner:
             msg = "Validation passed and data is ready for persistence"
         else:
             await asyncio.sleep(1.0)
-            await publish_event(run_id, "agent_started", progress=10, agent_name="IngestionAgent", message="Validation failed — running LLM correction…")
+            await publish_event(run_id, "agent_started", progress=10, agent_name="IngestionAgent", message="Validation failed - running LLM correction…")
             msg = "Validation failed; triggering self-correction cycle"
 
         return {
@@ -233,7 +233,7 @@ class CFOGraphRunner:
                 "gross_margin": kpis.get("gross_margin"),
                 "anomaly_count": anomaly_count,
             },
-            message=f"KPIs computed — MRR ${kpis.get('mrr', 0):,.0f}, {anomaly_count} anomalies detected",
+            message=f"KPIs computed - MRR ${kpis.get('mrr', 0):,.0f}, {anomaly_count} anomalies detected",
         )
         return {
             "kpis": kpis,
@@ -241,11 +241,11 @@ class CFOGraphRunner:
             "survival_analysis": result.get("survival_analysis"),
             "scenario_analysis": result.get("scenario_analysis"),
             "status": result["status"],
-            "messages": [AIMessage(content="Analysis completed — survival score and scenarios computed")],
+            "messages": [AIMessage(content="Analysis completed - survival score and scenarios computed")],
         }
 
     async def _market_analyze_node(self, state: CFOState) -> dict[str, Any]:
-        """Light market scan that runs during every analyze — sector-aware."""
+        """Light market scan that runs during every analyze - sector-aware."""
         run_id = state["run_id"]
         await asyncio.sleep(1.0)
         await publish_event(run_id, "agent_started", progress=77, agent_name="MarketAgent", message="Scanning competitor signals…")
@@ -261,11 +261,11 @@ class CFOGraphRunner:
         await publish_event(
             run_id, "agent_completed", progress=95, agent_name="MarketAgent",
             data={"signal_count": signal_count},
-            message=f"Market scan complete — {signal_count} competitor signals",
+            message=f"Market scan complete - {signal_count} competitor signals",
         )
         return {
             "market_signals": result["market_signals"],
-            "messages": [AIMessage(content=f"Market scan complete — {signal_count} signals")],
+            "messages": [AIMessage(content=f"Market scan complete - {signal_count} signals")],
         }
 
     async def _market_node(self, state: CFOState) -> dict[str, Any]:
@@ -298,7 +298,7 @@ class CFOGraphRunner:
         return {
             "board_questions": questions,
             "status": "complete",
-            "messages": [AIMessage(content=f"Board interrogation deck generated — {len(questions)} questions")],
+            "messages": [AIMessage(content=f"Board interrogation deck generated - {len(questions)} questions")],
         }
 
     async def _failure_node(self, state: CFOState) -> dict[str, Any]:
@@ -339,7 +339,7 @@ class CFOGraphRunner:
             raise ValueError(final_state.get("error", "Analyze workflow failed"))
         await publish_event(
             effective_run_id, "pipeline_completed", progress=100,
-            message="Analysis complete — dashboard ready",
+            message="Analysis complete - dashboard ready",
             data={
                 "survival_analysis": final_state.get("survival_analysis"),
                 "scenario_analysis": final_state.get("scenario_analysis"),

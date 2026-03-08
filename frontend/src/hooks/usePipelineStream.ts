@@ -1,5 +1,5 @@
 /**
- * usePipelineStream — real-time WebSocket hook with polling fallback.
+ * usePipelineStream - real-time WebSocket hook with polling fallback.
  *
  * Strategy:
  *  1. Connect to WebSocket ws://{NEXT_PUBLIC_WS_URL}/ws/pipeline/{runId}
@@ -161,7 +161,7 @@ export function usePipelineStream(runId: string | null): PipelineStreamState {
           clearInterval(pollRef.current);
         }
       } catch {
-        // Network blip — keep polling
+        // Network blip - keep polling
       }
     };
 

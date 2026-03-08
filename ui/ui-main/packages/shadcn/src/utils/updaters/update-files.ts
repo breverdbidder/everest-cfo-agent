@@ -607,7 +607,7 @@ async function resolveImports(filePaths: string[], config: Config) {
 /**
  * Given an absolute "probable" import path (no ext),
  * plus an array of absolute file paths you already know about,
- * return 0–N matches (best match first), and also check disk for any missing ones.
+ * return 0-N matches (best match first), and also check disk for any missing ones.
  */
 export function resolveModuleByProbablePath(
   probableImportFilePath: string,

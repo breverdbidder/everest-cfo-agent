@@ -1,9 +1,9 @@
 """
-perception.py — PerceptionEngine
+perception.py - PerceptionEngine
 
 Reads existing DB state (KPISnapshots, Anomalies, FraudAlerts) to build a
 structured snapshot of the company's current financial health.
-No external API calls — assumes Stripe/QB syncs have already run.
+No external API calls - assumes Stripe/QB syncs have already run.
 """
 
 from __future__ import annotations

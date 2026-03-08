@@ -25,13 +25,13 @@ export function CFOReport({ report }: Props) {
       </CardHeader>
 
       <CardContent>
-        {/* Executive summary — always visible */}
+        {/* Executive summary - always visible */}
         <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
           <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 mb-2">Executive Summary</div>
           <div className="text-sm leading-relaxed text-zinc-300 whitespace-pre-line">{report.executive_summary}</div>
         </div>
 
-        {/* Full report — expandable */}
+        {/* Full report - expandable */}
         {expanded && report.full_report_markdown && (
           <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950 p-4 animate-fade-in-up">
             <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 mb-3">Full Report</div>

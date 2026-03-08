@@ -1,8 +1,8 @@
 """
-stripe_sync.py — Stripe OAuth Integration
+stripe_sync.py - Stripe OAuth Integration
 
 Handles Stripe OAuth flow, token storage/encryption, and subscription data sync.
-Runs in demo mode if STRIPE_CLIENT_ID is not set — returns placeholder URLs.
+Runs in demo mode if STRIPE_CLIENT_ID is not set - returns placeholder URLs.
 """
 
 from __future__ import annotations

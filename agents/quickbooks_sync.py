@@ -1,5 +1,5 @@
 """
-quickbooks_sync.py — QuickBooks Online OAuth Integration
+quickbooks_sync.py - QuickBooks Online OAuth Integration
 
 Handles QuickBooks OAuth 2.0 flow, P&L sync, and account-to-category mapping.
 Runs in demo mode if QUICKBOOKS_CLIENT_ID is not set.

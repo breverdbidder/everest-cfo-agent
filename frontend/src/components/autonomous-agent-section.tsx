@@ -145,7 +145,7 @@ export function AutonomousAgentSection({ runId, companyName, sector }: Props) {
       const s = await getAgentStatus(runId);
       setStatus(s);
     } catch {
-      // API not yet active — show empty state
+      // API not yet active - show empty state
     } finally {
       setLoading(false);
     }

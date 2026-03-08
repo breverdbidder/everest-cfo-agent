@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-send_morning_briefings.py — Morning CFO Briefing delivery script.
+send_morning_briefings.py - Morning CFO Briefing delivery script.
 
 Run via cron at 7 AM daily:
   0 7 * * * /path/to/venv/bin/python3 scripts/send_morning_briefings.py
@@ -46,7 +46,7 @@ API_BASE = os.getenv("MORNING_BRIEFING_API", "http://localhost:8000")
 def _format_sms(d: dict) -> str:
     """Format briefing as SMS (≤320 chars for readability)."""
     lines = [
-        f"🏦 AI CFO — {d['company_name']}",
+        f"🏦 AI CFO - {d['company_name']}",
         f"💰 {d['runway_months']:.1f}mo runway | MRR {'+' if d['mrr_change_pct']>0 else ''}{d['mrr_change_pct']:.1f}%",
     ]
     if d["urgent"]:
@@ -61,7 +61,7 @@ def _format_slack(d: dict) -> dict:
     """Format briefing as Slack Block Kit payload."""
     runway_emoji = "🔴" if d["runway_months"] < 3 else "🟡" if d["runway_months"] < 6 else "🟢"
     blocks = [
-        {"type": "header", "text": {"type": "plain_text", "text": f"🌅 Morning CFO Briefing — {d['company_name']}"}},
+        {"type": "header", "text": {"type": "plain_text", "text": f"🌅 Morning CFO Briefing - {d['company_name']}"}},
         {"type": "section", "fields": [
             {"type": "mrkdwn", "text": f"{runway_emoji} *Runway:* {d['runway_months']:.1f} months"},
             {"type": "mrkdwn", "text": f"🔥 *Burn:* ${d['burn_rate']:,}/wk ({'+' if d['burn_change_pct']>0 else ''}{d['burn_change_pct']:.1f}%)"},
@@ -141,7 +141,7 @@ def _format_email_html(d: dict) -> str:
 async def _send_email(to: str, subject: str, html: str) -> None:
     api_key = os.getenv("SENDGRID_API_KEY")
     if not api_key:
-        print(f"  ⚠  SENDGRID_API_KEY not set — skipping email to {to}")
+        print(f"  ⚠  SENDGRID_API_KEY not set - skipping email to {to}")
         return
     async with httpx.AsyncClient() as client:
         resp = await client.post(
@@ -175,7 +175,7 @@ async def _send_sms(to: str, body: str) -> None:
     token = os.getenv("TWILIO_AUTH_TOKEN")
     frm   = os.getenv("TWILIO_FROM_NUMBER")
     if not (sid and token and frm):
-        print(f"  ⚠  Twilio credentials not set — skipping SMS to {to}")
+        print(f"  ⚠  Twilio credentials not set - skipping SMS to {to}")
         return
     async with httpx.AsyncClient() as client:
         resp = await client.post(
@@ -214,7 +214,7 @@ async def send_briefing(
 
     # 2. Deliver
     tasks = []
-    subject = f"🌅 Morning CFO Briefing — {d['company_name']} | {d['runway_months']:.1f}mo runway"
+    subject = f"🌅 Morning CFO Briefing - {d['company_name']} | {d['runway_months']:.1f}mo runway"
     if email:
         tasks.append(_send_email(email, subject, _format_email_html(d)))
     if phone:
@@ -222,7 +222,7 @@ async def send_briefing(
     if slack_webhook:
         tasks.append(_send_slack(slack_webhook, _format_slack(d)))
     if not tasks:
-        print("  ⚠  No delivery targets configured — printing briefing:\n")
+        print("  ⚠  No delivery targets configured - printing briefing:\n")
         print(_format_sms(d))
     else:
         await asyncio.gather(*tasks)

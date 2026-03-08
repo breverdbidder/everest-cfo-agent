@@ -97,7 +97,7 @@ class ReportRecord(BaseModel):
 # ---------------------------------------------------------------------------
 
 class SurvivalAnalysis(BaseModel):
-    """Monte Carlo runway survival output — probability of financial ruin at each horizon."""
+    """Monte Carlo runway survival output - probability of financial ruin at each horizon."""
 
     score: int = Field(ge=0, le=100, description="Survival score 0-100 (100 = no risk of ruin in 365 days)")
     label: Literal["SAFE", "LOW_RISK", "MODERATE_RISK", "HIGH_RISK", "CRITICAL"]

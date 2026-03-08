@@ -5,11 +5,11 @@ Calculates a 0-100 composite health score from existing KPISnapshot data and
 gets a live 2-3 sentence assessment from Claude Haiku.
 
 Score components (weighted average):
-  30% — Runway health
-  20% — Burn stability (WoW change)
-  20% — Revenue growth (MoM change)
-  15% — Unit economics (LTV:CAC)
-  15% — Risk factors (HIGH anomalies + fraud)
+  30% - Runway health
+  20% - Burn stability (WoW change)
+  20% - Revenue growth (MoM change)
+  15% - Unit economics (LTV:CAC)
+  15% - Risk factors (HIGH anomalies + fraud)
 
 Results are cached in-memory for 2 minutes to avoid redundant API calls.
 """
@@ -35,7 +35,7 @@ _SYSTEM_PROMPT = (
     "You are an experienced CFO giving a direct financial health assessment. "
     "Write exactly 2-3 sentences. Be specific with numbers. "
     "Identify the single most important concern or positive, then give one concrete action. "
-    "Do not use markdown, bullet points, or headers — plain prose only."
+    "Do not use markdown, bullet points, or headers - plain prose only."
 )
 
 _FALLBACK_REASONING = (

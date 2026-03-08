@@ -1,5 +1,5 @@
 """
-deferred_revenue.py — GAAP Deferred Revenue Engine
+deferred_revenue.py - GAAP Deferred Revenue Engine
 
 Calculates monthly revenue recognition schedules for annual/multi-year SaaS contracts.
 Tracks deferred revenue balance as contracts are recognized over time.

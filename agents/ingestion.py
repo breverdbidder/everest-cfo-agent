@@ -70,7 +70,7 @@ class IngestionAgent:
     """Parses CSV/PDF financial files, validates with Pydantic, and persists to DB.
 
     The LLM self-correction loop is triggered only when >10% of rows fail Pydantic
-    validation — in practice this handles dirty exports from accounting tools.
+    validation - in practice this handles dirty exports from accounting tools.
     """
 
     async def ingest(
@@ -211,7 +211,7 @@ class IngestionAgent:
 
         system_prompt = (
             "You are a financial data normalizer. Fix the provided rows so they conform to the schema. "
-            "Return ONLY a valid JSON array — no commentary, no markdown fences."
+            "Return ONLY a valid JSON array - no commentary, no markdown fences."
         )
         user_prompt = (
             f"Schema: {{ date: YYYY-MM-DD, category: one of {sorted(_VALID_CATEGORIES)}, "

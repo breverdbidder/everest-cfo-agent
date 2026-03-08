@@ -25,7 +25,7 @@ _TAVILY_TTL_SECONDS = 3600 * 6
 
 
 # ---------------------------------------------------------------------------
-# Rules-based signal classification — replaces GPT-4o-mini (~45 LLM calls/run)
+# Rules-based signal classification - replaces GPT-4o-mini (~45 LLM calls/run)
 # ---------------------------------------------------------------------------
 
 _PRICING_KEYWORDS = {
@@ -59,7 +59,7 @@ def _classify_signal_type(text: str, provider: str) -> str:
 
 
 def _summarize_signal(text: str, max_len: int = 320) -> str:
-    """Extract clean summary from raw signal text — no LLM required."""
+    """Extract clean summary from raw signal text - no LLM required."""
     cleaned = re.sub(r"\s+", " ", text).strip()
     sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", cleaned) if len(s.strip()) > 20]
     summary = " ".join(sentences[:3])
@@ -90,7 +90,7 @@ class MarketAgent:
     async def fetch_tavily_news(self, competitor: dict[str, Any]) -> list[dict[str, Any]]:
         """Fetch competitor news via Tavily API with in-process caching.
 
-        Falls back to DuckDuckGo if no API key is configured — zero cost fallback.
+        Falls back to DuckDuckGo if no API key is configured - zero cost fallback.
         """
         if not self.tavily_api_key:
             return await self.fetch_duckduckgo_news(competitor)
@@ -129,7 +129,7 @@ class MarketAgent:
         return rows
 
     async def fetch_duckduckgo_news(self, competitor: dict[str, Any]) -> list[dict[str, Any]]:
-        """Free news search via DuckDuckGo — no API key required."""
+        """Free news search via DuckDuckGo - no API key required."""
         try:
             from duckduckgo_search import DDGS
         except ImportError:
@@ -161,7 +161,7 @@ class MarketAgent:
         ]
 
     async def fetch_hn_signals(self, competitor: dict[str, Any]) -> list[dict[str, Any]]:
-        """Free Hacker News signals via Algolia API — no API key required.
+        """Free Hacker News signals via Algolia API - no API key required.
 
         Returns top HN discussions mentioning the competitor from the last 6 months.
         """
@@ -189,7 +189,7 @@ class MarketAgent:
             story_url = hit.get("url") or f"https://news.ycombinator.com/item?id={hit.get('objectID', '')}"
             points = hit.get("points", 0)
             num_comments = hit.get("num_comments", 0)
-            text = f"{title} — {points} points, {num_comments} comments on Hacker News"
+            text = f"{title} - {points} points, {num_comments} comments on Hacker News"
             rows.append(
                 {
                     "competitor_name": competitor["name"],
@@ -201,9 +201,9 @@ class MarketAgent:
 
         return rows
 
-    # Diverse pool of realistic hiring signals — each competitor gets 1-2 unique ones
+    # Diverse pool of realistic hiring signals - each competitor gets 1-2 unique ones
     _DEMO_HIRING_ROLES = [
-        "is hiring a Senior Platform Engineer (Remote, $180–220K)",
+        "is hiring a Senior Platform Engineer (Remote, $180-220K)",
         "opened a Head of Enterprise Sales role as it expands upmarket",
         "posted a Senior Product Manager position for its core platform",
         "is seeking a Staff ML Engineer for its AI infrastructure team",
@@ -211,17 +211,17 @@ class MarketAgent:
         "posted a Director of Product Marketing to lead its PLG motion",
         "opened a DevOps / Infrastructure Engineer role (Kubernetes)",
         "is hiring a Senior Backend Engineer (Python / Rust)",
-        "posted an Enterprise Account Executive — $200K+ OTE",
+        "posted an Enterprise Account Executive - $200K+ OTE",
         "listed a Head of Finance / Controller for Series B readiness",
         "is seeking a Senior Data Analyst for its GTM analytics function",
         "opened a Field CTO role to support its enterprise customer base",
-        "posted a Principal Engineer — Distributed Systems (Remote)",
+        "posted a Principal Engineer - Distributed Systems (Remote)",
         "is hiring a Growth Engineer to scale its self-serve funnel",
         "listed a Founding Designer to lead product design end-to-end",
     ]
 
     async def fetch_hiring_signals(self, competitor: dict[str, Any]) -> list[dict[str, Any]]:
-        """Free job/hiring signal detection via DuckDuckGo news — replaces Proxycurl ($0.01-0.10/call)."""
+        """Free job/hiring signal detection via DuckDuckGo news - replaces Proxycurl ($0.01-0.10/call)."""
         try:
             from duckduckgo_search import DDGS
         except ImportError:
@@ -241,7 +241,7 @@ class MarketAgent:
         except Exception:
             results = []
 
-        # Fall back to synthetic demo signals — each competitor gets 1-2 unique, varied roles
+        # Fall back to synthetic demo signals - each competitor gets 1-2 unique, varied roles
         if not results:
             pool = self._DEMO_HIRING_ROLES
             # Use competitor name hash for deterministic but varied assignment
@@ -265,7 +265,7 @@ class MarketAgent:
         ]
 
     async def fetch_pricing_page(self, competitor: dict[str, Any]) -> list[dict[str, Any]]:
-        """Free pricing page scraping via httpx + BeautifulSoup — replaces Zyte ($10+/1000 pages)."""
+        """Free pricing page scraping via httpx + BeautifulSoup - replaces Zyte ($10+/1000 pages)."""
         if not competitor.get("pricing_url"):
             return []
 
@@ -308,7 +308,7 @@ class MarketAgent:
         ]
 
     async def classify_signal(self, raw_signal: dict[str, Any], run_id: uuid.UUID) -> MarketSignalRecord:
-        """Classify and summarize a raw signal using rules — no LLM call needed."""
+        """Classify and summarize a raw signal using rules - no LLM call needed."""
         text = raw_signal.get("text", "")
         provider = raw_signal.get("provider", "")
 

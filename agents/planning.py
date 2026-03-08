@@ -1,5 +1,5 @@
 """
-planning.py — PlanningEngine
+planning.py - PlanningEngine
 
 Converts a ReasoningEngine decision into a concrete ActionPlan with
 a sequence of Action steps. Uses pre-defined templates per decision type.
@@ -17,7 +17,7 @@ class ActionType(str, Enum):
     SEND_EMAIL = "send_email"                  # Send email via SMTP (always approved for reminders)
     GENERATE_VC_MEMO = "generate_vc_memo"      # Call existing generate_vc_memo() (always approved)
     GENERATE_INVESTOR_UPDATE = "generate_investor_update"  # Call existing generate_investor_update()
-    CREATE_APPROVAL = "create_approval"        # Write pending_approval action — founder must OK
+    CREATE_APPROVAL = "create_approval"        # Write pending_approval action - founder must OK
 
 
 class DecisionType(str, Enum):
@@ -99,7 +99,7 @@ class PlanningEngine:
                     type=ActionType.SEND_SLACK_WEBHOOK,
                     params={
                         "text": (
-                            f"🚨 *CRITICAL RUNWAY ALERT — {company}*\n"
+                            f"🚨 *CRITICAL RUNWAY ALERT - {company}*\n"
                             f"Only *{runway:.1f} months* remaining.\n"
                             f"Burn: ${obs.get('burn_rate', 0):,.0f}/wk | "
                             f"MRR: ${obs.get('mrr', 0):,.0f}/wk\n"
@@ -139,7 +139,7 @@ class PlanningEngine:
                 Action(
                     type=ActionType.GENERATE_INVESTOR_UPDATE,
                     params={
-                        "reason": "Proactive fundraising prep — runway < 6 months",
+                        "reason": "Proactive fundraising prep - runway < 6 months",
                         "months_runway": runway,
                     },
                     requires_approval=False,
@@ -148,7 +148,7 @@ class PlanningEngine:
                     type=ActionType.SEND_SLACK_WEBHOOK,
                     params={
                         "text": (
-                            f"⚠️ *Runway Warning — {company}*\n"
+                            f"⚠️ *Runway Warning - {company}*\n"
                             f"*{runway:.1f} months* remaining.\n"
                             f"Agent has drafted an investor update. Check dashboard."
                         ),
@@ -214,7 +214,7 @@ class PlanningEngine:
                     type=ActionType.SEND_SLACK_WEBHOOK,
                     params={
                         "text": (
-                            f"🚨 *Fraud Alert — {company}*\n"
+                            f"🚨 *Fraud Alert - {company}*\n"
                             f"*{count}* high-severity suspicious pattern(s) detected.\n"
                             "Review Fraud Monitor in dashboard immediately."
                         ),
@@ -246,7 +246,7 @@ class PlanningEngine:
 
     def _plan_all_clear(self, reasoning: str) -> ActionPlan:
         return ActionPlan(
-            goal="No action required — financial state healthy",
+            goal="No action required - financial state healthy",
             plan_type="all_clear",
             decision_reasoning=reasoning,
             actions=[

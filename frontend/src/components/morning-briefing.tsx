@@ -38,7 +38,7 @@ function BriefingMessage({ d }: { d: MorningBriefingData }) {
   const c = runwayColor(d.runway_months);
 
   const plainText = [
-    `🏦 Good morning ${d.company_name} — your AI CFO here.`,
+    `🏦 Good morning ${d.company_name} - your AI CFO here.`,
     ``,
     `💰 CASH STATUS: ${d.runway_months.toFixed(1)} months runway`,
     d.burn_change_pct !== 0
@@ -98,7 +98,7 @@ function BriefingMessage({ d }: { d: MorningBriefingData }) {
               <div className="bg-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%]">
                 <div className="text-sm font-black text-gray-900">🏦 Good morning</div>
                 <div className="text-xs text-gray-600 mt-0.5">
-                  <span className="font-semibold">{d.company_name}</span> — your AI CFO is here.
+                  <span className="font-semibold">{d.company_name}</span> - your AI CFO is here.
                 </div>
               </div>
             </div>
@@ -319,7 +319,7 @@ export function MorningBriefing({ runId, companyName, onGenerate, data, loading 
           </div>
           <div className="text-sm text-gray-400 mb-6 max-w-sm">
             Get a personalized briefing with urgent alerts, good news, and 3 specific
-            action items — the way a co-founder always watching the numbers would deliver it.
+            action items - the way a co-founder always watching the numbers would deliver it.
           </div>
           <button
             onClick={onGenerate}

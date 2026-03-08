@@ -1,4 +1,4 @@
-"""AI CFO Agent — Live Intelligence Dashboard
+"""AI CFO Agent - Live Intelligence Dashboard
 
 Upload a CSV, watch the AI pipeline run step-by-step, and get your full financial
 analysis: Survival Score, Board Interrogation, and Scenario Stress Test.
@@ -187,7 +187,7 @@ def _query(sql: str, params: dict | None = None) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# Data loaders (SQLite-compatible — no ::text casts)
+# Data loaders (SQLite-compatible - no ::text casts)
 # ---------------------------------------------------------------------------
 
 def _load_all_run_ids() -> list[str]:
@@ -453,7 +453,7 @@ def _render_results(run_id: str, status: dict) -> None:
         surv = st.session_state.get("survival_data", {})
         if surv:
             score = int(surv.get("score", 0))
-            label = surv.get("label", "—").replace("_", " ")
+            label = surv.get("label", "-").replace("_", " ")
             deadline = surv.get("fundraising_deadline", "")
             st.plotly_chart(_chart_survival_gauge(score), use_container_width=True,
                             config={"displayModeBar": False}, key=f"gauge_{run_id}")
@@ -467,7 +467,7 @@ def _render_results(run_id: str, status: dict) -> None:
         else:
             st.markdown('<div class="metric-card" style="text-align:center;padding:2rem;">'
                         '<div class="label-text">SURVIVAL SCORE</div>'
-                        '<div style="font-size:2.5rem;font-weight:700;color:#86868b;margin-top:0.5rem;">—</div>'
+                        '<div style="font-size:2.5rem;font-weight:700;color:#86868b;margin-top:0.5rem;">-</div>'
                         '</div>', unsafe_allow_html=True)
 
     with col_trend:
@@ -606,7 +606,7 @@ def _tab_past_runs() -> None:
 def main() -> None:
     # Header
     alive = _api_alive()
-    api_dot = '<span class="api-ok">● API online</span>' if alive else '<span class="api-err">● API offline — start: poetry run uvicorn api.main:app --port 8000</span>'
+    api_dot = '<span class="api-ok">● API online</span>' if alive else '<span class="api-err">● API offline - start: poetry run uvicorn api.main:app --port 8000</span>'
     col_h, col_api = st.columns([3, 2])
     with col_h:
         st.markdown(
@@ -637,7 +637,7 @@ def main() -> None:
             )
             c_demo, c_upload = st.columns(2)
             with c_demo:
-                run_demo = st.button("▶  Run Demo", help="Run on built-in sample data — no upload needed")
+                run_demo = st.button("▶  Run Demo", help="Run on built-in sample data - no upload needed")
             with c_upload:
                 run_file = st.button("⬆  Analyze File", disabled=(uploaded is None),
                                      help="Run pipeline on your uploaded file")

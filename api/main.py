@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-# Load .env FIRST — must happen before any module reads os.getenv at import time
+# Load .env FIRST - must happen before any module reads os.getenv at import time
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -201,7 +201,7 @@ def create_app(
         title="AI CFO Agent API",
         version=_load_app_version(),
         description=(
-            "Autonomous multi-agent financial analyst — Survival Score, Board Interrogation, "
+            "Autonomous multi-agent financial analyst - Survival Score, Board Interrogation, "
             "and Scenario Stress Testing for startups that can't afford a real CFO."
         ),
         lifespan=lifespan,
@@ -321,7 +321,7 @@ def create_app(
                 await session.commit()
                 await DeferredRevenueCalculator().run(session, run_id_uuid)
         except Exception:
-            pass  # Non-fatal — dashboard degrades gracefully if seeding fails
+            pass  # Non-fatal - dashboard degrades gracefully if seeding fails
 
         return AnalyzeResponse(
             run_id=result["run_id"],
@@ -700,10 +700,10 @@ def create_app(
             for r in rows
         ]
 
-    # ── Competitor profiles (Wikipedia + Clearbit logo — fully free) ─────────
+    # ── Competitor profiles (Wikipedia + Clearbit logo - fully free) ─────────
 
     async def _fetch_wikipedia(title: str) -> dict:
-        """Fetch company summary from Wikipedia REST API — free, no key, CORS-enabled."""
+        """Fetch company summary from Wikipedia REST API - free, no key, CORS-enabled."""
         url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{title}"
         try:
             async with httpx.AsyncClient(timeout=6.0) as client:
@@ -724,7 +724,7 @@ def create_app(
         """Return competitor profiles for a sector, enriched with Wikipedia summaries.
 
         Logo URLs are constructed using the free Clearbit Logo API:
-        https://logo.clearbit.com/{domain}  — no API key required.
+        https://logo.clearbit.com/{domain}  - no API key required.
         """
         competitors_file = _PROJECT_ROOT / "data" / "competitors.json"
         if not competitors_file.exists():
@@ -789,7 +789,7 @@ def create_app(
 
     @app.post("/board-prep", response_model=BoardPrepResponse)
     async def board_prep(request: BoardPrepRequest) -> BoardPrepResponse:
-        """Generate adversarial board Q&A — 8 hard VC questions with pre-drafted CFO answers."""
+        """Generate adversarial board Q&A - 8 hard VC questions with pre-drafted CFO answers."""
         try:
             result = await app.state.graph_runner.run_board_prep(run_id=request.run_id)
         except Exception as exc:
@@ -803,7 +803,7 @@ def create_app(
     async def vc_memo(request: VCMemoRequest) -> VCMemoResponse:
         """Generate an internal VC investment committee memo for a run.
 
-        Uses Claude Haiku — costs ~$0.003 per call. Fetches KPI data from DB,
+        Uses Claude Haiku - costs ~$0.003 per call. Fetches KPI data from DB,
         combines with survival data passed in the request body.
         """
         db_manager = app.state.db_manager if hasattr(app.state, "db_manager") else get_db_manager()
@@ -848,7 +848,7 @@ def create_app(
     async def investor_update(request: InvestorUpdateRequest) -> InvestorUpdateResponse:
         """Generate a ready-to-send monthly investor update email grounded in real KPI data.
 
-        Uses Claude Haiku — costs ~$0.003 per call. One click, copy-paste ready.
+        Uses Claude Haiku - costs ~$0.003 per call. One click, copy-paste ready.
         """
         db_manager = app.state.db_manager if hasattr(app.state, "db_manager") else get_db_manager()
         async with db_manager.session() as session:
@@ -1122,7 +1122,7 @@ def create_app(
 
     @app.get("/integrations/stripe/callback")
     async def stripe_callback(code: str) -> dict:
-        """Handle Stripe OAuth callback — exchange code for access token."""
+        """Handle Stripe OAuth callback - exchange code for access token."""
         db_manager = app.state.db_manager if hasattr(app.state, "db_manager") else get_db_manager()
         async with db_manager.session() as session:
             agent = StripeIngestionAgent()
@@ -1157,7 +1157,7 @@ def create_app(
 
     @app.get("/integrations/quickbooks/callback")
     async def quickbooks_callback(code: str, realmId: str = "") -> dict:
-        """Handle QuickBooks OAuth callback — exchange code for access token."""
+        """Handle QuickBooks OAuth callback - exchange code for access token."""
         db_manager = app.state.db_manager if hasattr(app.state, "db_manager") else get_db_manager()
         async with db_manager.session() as session:
             agent = QuickBooksIngestionAgent()
@@ -1300,7 +1300,7 @@ def create_app(
         """Compare this run's KPIs against anonymous industry percentile benchmarks.
 
         Returns p25/p50/p75 for each metric plus the company's percentile rank.
-        No API key required — data is from public SaaStr / OpenView / a16z reports.
+        No API key required - data is from public SaaStr / OpenView / a16z reports.
         """
         benchmarks_file = _PROJECT_ROOT / "data" / "benchmarks.json"
         if not benchmarks_file.exists():
@@ -1326,7 +1326,7 @@ def create_app(
                     return 50.0 + ((val - p50) / (p75 - p50)) * 25
                 return min(100.0, 75.0 + ((val - p75) / max(p75 - p25, 0.001)) * 25)
             else:
-                # lower is better — invert scale
+                # lower is better - invert scale
                 if p25 <= p75:
                     return 50.0
                 if val >= p25:
@@ -1567,7 +1567,7 @@ def create_app(
 
     @app.post("/agent/actions/{action_id}/reject")
     async def reject_agent_action(action_id: uuid.UUID) -> dict[str, Any]:
-        """Reject a pending agent action — marks it as rejected without executing."""
+        """Reject a pending agent action - marks it as rejected without executing."""
         from agents.agent_memory import AgentMemory
 
         db_manager = app.state.db_manager if hasattr(app.state, "db_manager") else get_db_manager()

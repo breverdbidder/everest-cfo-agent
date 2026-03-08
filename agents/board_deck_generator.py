@@ -1,5 +1,5 @@
 """
-board_deck_generator.py — Automated Board Deck Generator
+board_deck_generator.py - Automated Board Deck Generator
 
 Generates a branded 10-slide PowerPoint deck from existing KPI, anomaly,
 market signal, scenario, and report data. Uses python-pptx for slide assembly
@@ -86,13 +86,13 @@ class BoardDeckGenerator:
             import re
             text = report.executive_summary
             # Extract bullet lines
-            lines = [l.strip().lstrip("•-– ") for l in text.split("\n") if l.strip()]
+            lines = [l.strip().lstrip("•-- ") for l in text.split("\n") if l.strip()]
             bullets = [l for l in lines if l][:3]
         if not bullets:
             bullets = [
                 f"Weekly MRR of ${float(latest.mrr or 0):,.0f} with {float(latest.gross_margin or 0)*100:.0f}% gross margin" if latest else "Financial data loaded",
-                f"Burn rate ${float(latest.burn_rate or 0):,.0f}/week — monitoring closely" if latest else "Burn under review",
-                f"Churn rate {float(latest.churn_rate or 0)*100:.1f}% — within acceptable range" if latest else "Churn stable",
+                f"Burn rate ${float(latest.burn_rate or 0):,.0f}/week - monitoring closely" if latest else "Burn under review",
+                f"Churn rate {float(latest.churn_rate or 0)*100:.1f}% - within acceptable range" if latest else "Churn stable",
             ]
         self._slide_exec_summary(prs, blank_layout, bullets)
 
@@ -144,7 +144,7 @@ class BoardDeckGenerator:
         slide = prs.slides.add_slide(layout)
         self._fill_bg(slide, DARK)
         self._add_text(slide, company_name.upper(), 1.5, 2.5, 10, 1, Pt(48), "FFFFFF", bold=True)
-        self._add_text(slide, "BOARD OF DIRECTORS — CONFIDENTIAL", 1.5, 3.5, 10, 0.5, Pt(14), "6e6e73")
+        self._add_text(slide, "BOARD OF DIRECTORS - CONFIDENTIAL", 1.5, 3.5, 10, 0.5, Pt(14), "6e6e73")
         self._add_text(slide, date.today().strftime("%B %Y"), 1.5, 4.2, 10, 0.5, Pt(18), "0071e3")
 
     def _slide_exec_summary(self, prs, layout, bullets: list[str]) -> None:
@@ -326,9 +326,9 @@ class BoardDeckGenerator:
             runway_months = runway_weeks / 4.33
 
             color = "ff3b30" if runway_months < 6 else "ff9500" if runway_months < 12 else "34c759"
-            status = "CRITICAL — Begin fundraising immediately" if runway_months < 6 else \
-                     "CAUTION — Start Series A process in 90 days" if runway_months < 12 else \
-                     "HEALTHY — Well-capitalized for growth"
+            status = "CRITICAL - Begin fundraising immediately" if runway_months < 6 else \
+                     "CAUTION - Start Series A process in 90 days" if runway_months < 12 else \
+                     "HEALTHY - Well-capitalized for growth"
 
             self._add_text(slide, f"{runway_months:.0f}", 4.5, 2.2, 4.0, 1.5, Pt(96), color, bold=True)
             self._add_text(slide, "months of runway at current burn", 3.5, 3.8, 6.5, 0.5, Pt(14), "6e6e73")
@@ -359,7 +359,7 @@ class BoardDeckGenerator:
 
         x = [0] + weeks
         fig, ax = plt.subplots(figsize=(12, 5), facecolor="white")
-        ax.fill_between(x, p10, p90, color=BLUE, alpha=0.15, label="P10–P90 range")
+        ax.fill_between(x, p10, p90, color=BLUE, alpha=0.15, label="P10-P90 range")
         ax.plot(x, p50, color=BLUE, linewidth=2.5, label="P50 (median)")
         ax.axhline(0, color=RED, linestyle="--", linewidth=1.5, alpha=0.7, label="Zero cash")
         ax.set_xlabel("Week", fontsize=10)

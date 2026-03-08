@@ -1,9 +1,9 @@
-# AI CFO Agent — Financial Intelligence Platform
+# AI CFO Agent - Financial Intelligence Platform
 
 [![GitHub stars](https://img.shields.io/github/stars/daniel-st3/ai-cfo-agent?style=social)](https://github.com/daniel-st3/ai-cfo-agent/stargazers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **The AI CFO that 99% of startups can't afford — now open source.**
+> **The AI CFO that 99% of startups can't afford - now open source.**
 
 Drop a CSV of weekly transactions and get a board-ready finance cockpit in ~30 seconds: a live **Financial Health Score**, KPI command center, runway and Monte Carlo survival analysis, competitor intel, AI reports, and a new **AI CFO Decision Engine** that recommends actions, simulates impact across the dashboard, saves scenarios, and exports a shareable board snapshot. Optimized for low-cost inference at **~$0.003 per run**, with the decision layer itself running rules-first to avoid extra API spend.
 
@@ -69,7 +69,7 @@ python3 scripts/generate_linkedin_assets.py
 
 | Category | Feature |
 |---|---|
-| **Health Score** | Real-time 0-100 composite score (runway + burn + growth + unit econ + risk) with live Claude Haiku reasoning — cached 2 min, refreshable |
+| **Health Score** | Real-time 0-100 composite score (runway + burn + growth + unit econ + risk) with live Claude Haiku reasoning - cached 2 min, refreshable |
 | **KPI Engine** | 7 KPI cards (MRR, ARR, Burn, Gross Margin, Churn, CAC, LTV) + click-to-expand deep-dive charts |
 | **Survival** | Monte Carlo (10K simulations) → ruin probability at 90d / 180d / 365d |
 | **Runway** | Horizontal fuel-gauge bar + cut-burn / grow-MRR sliders with per-lever impact chips |
@@ -109,7 +109,7 @@ cd ai-cfo-agent
 # 2. Install backend dependencies
 pip install -e ".[ml]"          # ml group = scikit-learn, chronos (optional)
 
-# 3. Configure — get your free API key at https://console.anthropic.com/keys
+# 3. Configure - get your free API key at https://console.anthropic.com/keys
 cp .env.example .env
 # Open .env and set: ANTHROPIC_API_KEY=sk-ant-your-key-here
 # All other keys are optional (see API Keys section below)
@@ -124,7 +124,7 @@ uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 cd frontend && npm install && npm run dev
 ```
 
-Open **http://localhost:3000** and click **Run Demo** — no file upload needed.
+Open **http://localhost:3000** and click **Run Demo** - no file upload needed.
 
 This repo does **not** use `pipenv`. If you are working from the project-local virtualenv, the equivalent backend command is `.venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8000`.
 
@@ -134,7 +134,7 @@ This repo does **not** use `pipenv`. If you are working from the project-local v
 
 | Key | Required | Purpose | Cost |
 |---|---|---|---|
-| `ANTHROPIC_API_KEY` | **Yes** | Claude Haiku for all AI reports + agent reasoning | ~$0.001–0.008/run |
+| `ANTHROPIC_API_KEY` | **Yes** | Claude Haiku for all AI reports + agent reasoning | ~$0.001-0.008/run |
 | `TAVILY_API_KEY` | No | Competitor news (DuckDuckGo fallback) | Free tier |
 | `DATABASE_URL` | No | PostgreSQL (SQLite default) | Free |
 | `REDIS_URL` | No | Background tasks (Celery) | Free |
@@ -179,7 +179,7 @@ They all match the live upload schema, so you can drag them straight into the ap
 ┌─────────────────────────────────────────────────────────┐
 │  Next.js 15 App Router (port 3000)                       │
 │  ├── / (upload + pipeline animation)                     │
-│  ├── /run/[runId] (full dashboard — 14 sections)         │
+│  ├── /run/[runId] (full dashboard - 14 sections)         │
 │  └── /integrations/stripe · /integrations/quickbooks    │
 └──────────────────────┬──────────────────────────────────┘
                        │  REST  (NEXT_PUBLIC_API_URL)
@@ -230,7 +230,7 @@ Autonomous Agent Loop (runs on-demand or via Celery Beat):
 
 ## Real-Time Streaming Architecture
 
-The pipeline uses **WebSocket streaming** for real-time progress — with automatic polling fallback for restricted environments (corporate firewalls, proxies).
+The pipeline uses **WebSocket streaming** for real-time progress - with automatic polling fallback for restricted environments (corporate firewalls, proxies).
 
 ```
 Frontend (Next.js)
@@ -261,11 +261,11 @@ LangGraph pipeline nodes (in order):
 **Event payload example:**
 ```json
 {"event_type": "agent_completed", "agent_name": "AnalysisAgent",
- "progress": 75, "message": "KPIs computed — MRR $25,500, 5 anomalies detected",
+ "progress": 75, "message": "KPIs computed - MRR $25,500, 5 anomalies detected",
  "data": {"mrr": 25500, "gross_margin": 0.73, "anomaly_count": 5}}
 ```
 
-**Graceful degradation:** if WebSocket fails to open within 5 s, `usePipelineStream` auto-switches to polling `GET /runs/{runId}/status` every 2 s and synthesises equivalent events — the dashboard UI is identical regardless of transport.
+**Graceful degradation:** if WebSocket fails to open within 5 s, `usePipelineStream` auto-switches to polling `GET /runs/{runId}/status` every 2 s and synthesises equivalent events - the dashboard UI is identical regardless of transport.
 
 **Configuration** (`frontend/.env.local`):
 ```
@@ -289,11 +289,11 @@ NEXT_PUBLIC_WS_URL=ws://localhost:8000   # use wss:// in production
 
 | Act | Weeks | Story |
 |---|---|---|
-| 1 | 1–12 | Healthy growth, <0.5% weekly churn |
-| 2 | 13–26 | Crisis: 3 enterprise churns, marketing panic, burn spikes to $45K/wk |
-| 3 | 27–38 | Near-death: new mid-market wins, team right-sizing |
-| 4 | 39–55 | Recovery: 2 enterprise re-signs, MRR climbs back |
-| 5 | 56–78 | Hypergrowth: 3 more enterprise wins, MRR hits $42K/wk |
+| 1 | 1-12 | Healthy growth, <0.5% weekly churn |
+| 2 | 13-26 | Crisis: 3 enterprise churns, marketing panic, burn spikes to $45K/wk |
+| 3 | 27-38 | Near-death: new mid-market wins, team right-sizing |
+| 4 | 39-55 | Recovery: 2 enterprise re-signs, MRR climbs back |
+| 5 | 56-78 | Hypergrowth: 3 more enterprise wins, MRR hits $42K/wk |
 
 Regenerate: `python3 data/gen_drama.py`
 
@@ -321,7 +321,7 @@ rg -n '(ANTHROPIC_API_KEY|TAVILY_API_KEY|SLACK_WEBHOOK_URL|sk-ant-|xoxb-|AKIA|AI
 
 | Component | Cost |
 |---|---|
-| Claude Haiku (all AI reports per run) | ~$0.003–0.025 |
+| Claude Haiku (all AI reports per run) | ~$0.003-0.025 |
 | Morning briefing (Claude Haiku) | ~$0.003/day per user |
 | **Autonomous agent cycle (Claude Haiku)** | **~$0.003/cycle** |
 | SMS delivery (Twilio) | ~$0.01/message ([free trial](https://www.twilio.com/try-twilio)) |
@@ -331,8 +331,8 @@ rg -n '(ANTHROPIC_API_KEY|TAVILY_API_KEY|SLACK_WEBHOOK_URL|sk-ant-|xoxb-|AKIA|AI
 | Pricing scrape (httpx + BeautifulSoup) | $0 |
 | Anomaly detection (IsolationForest) | $0 |
 | Monte Carlo survival (NumPy) | $0 |
-| **Total per run** | **~$0.003–0.025** |
-| **Daily briefing + hourly agent** | **~$0.085–0.10/user/day** |
+| **Total per run** | **~$0.003-0.025** |
+| **Daily briefing + hourly agent** | **~$0.085-0.10/user/day** |
 
 ---
 
@@ -377,4 +377,4 @@ docs/            Screenshots
 
 ## License
 
-MIT — fork it, deploy it, build products on top of it. Star the repo if it saves you time. ⭐
+MIT - fork it, deploy it, build products on top of it. Star the repo if it saves you time. ⭐

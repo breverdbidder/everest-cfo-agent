@@ -1,12 +1,12 @@
 """
-autonomous_cfo.py — AutonomousCFOAgent
+autonomous_cfo.py - AutonomousCFOAgent
 
 Main agent loop orchestrating the 5 components:
-  1. Perception  — observe current financial state from DB
-  2. Reasoning   — Claude Haiku + tool_use decides what to do
-  3. Planning    — convert decision into concrete action steps
-  4. Execution   — run each action (alerts, Slack, report generation, approval gates)
-  5. Memory      — store observation + plan + outcomes for learning
+  1. Perception  - observe current financial state from DB
+  2. Reasoning   - Claude Haiku + tool_use decides what to do
+  3. Planning    - convert decision into concrete action steps
+  4. Execution   - run each action (alerts, Slack, report generation, approval gates)
+  5. Memory      - store observation + plan + outcomes for learning
 
 Usage::
 
@@ -102,7 +102,7 @@ class AutonomousCFOAgent:
             )
             result.plan_type = plan.plan_type
             result.plan_goal = plan.goal
-            logger.info("[Agent] Plan: %s — %s (%d actions)", plan.plan_type, plan.goal, len(plan.actions))
+            logger.info("[Agent] Plan: %s - %s (%d actions)", plan.plan_type, plan.goal, len(plan.actions))
 
             # Persist plan
             plan_row = await self.memory.store_plan(session, run_id, obs_row.id, plan)
@@ -173,7 +173,7 @@ class AutonomousCFOAgent:
         If action.requires_approval → save as pending_approval, don't execute yet.
         """
         if action.requires_approval:
-            # Write to DB as pending — founder approves/rejects via dashboard
+            # Write to DB as pending - founder approves/rejects via dashboard
             return (
                 ActionResult(
                     success=True,

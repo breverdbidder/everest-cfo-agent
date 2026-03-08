@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-playwright_check.py — Visual QA for the AI CFO Agent dashboard.
+playwright_check.py - Visual QA for the AI CFO Agent dashboard.
 
 Requirements:
   pip install playwright
@@ -38,7 +38,7 @@ async def run() -> None:
 
         # ── 2. Click Run Demo ──────────────────────────────────────────────
         print("→ Clicking Run Demo…")
-        # Try several selectors — button text may vary
+        # Try several selectors - button text may vary
         for selector in [
             "button:has-text('Run Live Demo')",
             "button:has-text('Run Demo')",
@@ -137,7 +137,7 @@ async def run() -> None:
 
         await browser.close()
 
-    print(f"\n✅ Done — {len(list(SHOTS_DIR.glob('*.png')))} screenshots saved to {SHOTS_DIR}/")
+    print(f"\n✅ Done - {len(list(SHOTS_DIR.glob('*.png')))} screenshots saved to {SHOTS_DIR}/")
 
 
 if __name__ == "__main__":

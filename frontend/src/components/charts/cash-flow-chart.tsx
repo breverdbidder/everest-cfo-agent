@@ -81,7 +81,7 @@ export function CashFlowChart({ forecast }: Props) {
           domain={[minVal, maxVal]}
           width={54}
         />
-        {/* Zero-cash line — neutral gray, clearly labelled */}
+        {/* Zero-cash line - neutral gray, clearly labelled */}
         <ReferenceLine
           y={0}
           stroke="#94a3b8"
@@ -109,7 +109,7 @@ export function CashFlowChart({ forecast }: Props) {
           fill="#0071e3"
           fillOpacity={0.12}
           stroke="none"
-          name="P10–P90 range"
+          name="P10-P90 range"
           isAnimationActive
           animationDuration={450}
         />

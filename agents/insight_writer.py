@@ -17,7 +17,7 @@ from api.models import Anomaly, KPISnapshot, MarketSignal, Report
 from api.schemas import CFOInsightPayload
 
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "anthropic/claude-3-5-sonnet-20241022")
-# Single provider — Haiku handles all fast-path tasks at lower cost than GPT-4o-mini
+# Single provider - Haiku handles all fast-path tasks at lower cost than GPT-4o-mini
 GPT_MINI_MODEL = os.getenv("GPT_MINI_MODEL", "anthropic/claude-haiku-3-5")
 
 
@@ -187,7 +187,7 @@ class InsightWriterAgent:
         ).scalars().all()
 
         latest = kpi_rows[-1]
-        # Use last 4 weeks of KPI data — sufficient for trend analysis, reduces token cost ~50%
+        # Use last 4 weeks of KPI data - sufficient for trend analysis, reduces token cost ~50%
         kpi_payload = [_serialize_kpi_snapshot(item) for item in kpi_rows[-4:]]
         anomalies_payload = [_serialize_anomaly(item) for item in anomaly_rows[:20]]
         market_payload = [_serialize_signal(item) for item in market_rows[:20]]
@@ -213,7 +213,7 @@ class InsightWriterAgent:
             default=str,
         )
 
-        # Direct message construction — no LangChain template overhead
+        # Direct message construction - no LangChain template overhead
         litellm_messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Generate the board-ready CFO briefing from this JSON payload. Output JSON only.\n{user_payload}"},
@@ -287,7 +287,7 @@ class InsightWriterAgent:
             )
         ).scalars().all()
         if not kpi_rows:
-            raise ValueError(f"No KPI data found for run_id={run_id} — run /analyze first")
+            raise ValueError(f"No KPI data found for run_id={run_id} - run /analyze first")
 
         anomaly_rows = (
             await session.execute(select(Anomaly).where(Anomaly.run_id == run_id))
@@ -312,7 +312,7 @@ class InsightWriterAgent:
             "danger must be RED (critical risk), YELLOW (requires explanation), or GREEN (positive but probe deeper). "
             "answer must be a direct, factual CFO response grounded in the financial data provided. "
             "follow_up is the one follow-up you would ask if the answer is unsatisfactory. "
-            "Output a JSON array of exactly 8 objects. No markdown, no commentary — JSON only."
+            "Output a JSON array of exactly 8 objects. No markdown, no commentary - JSON only."
         )
 
         user_payload = json.dumps(
@@ -408,9 +408,9 @@ async def generate_vc_memo(
         f"  Gross margin: {gm * 100:.1f}%  |  Weekly churn: {churn * 100:.2f}%\n"
         f"  LTV: ${ltv:,.0f}  |  CAC: ${cac:,.0f}  |  LTV/CAC: {ltv_cac:.1f}x\n"
         f"  Survival score: {survival_score}/100  |  6-month ruin prob: {ruin_probability_6m * 100:.1f}%\n\n"
-        "Write an internal VC investment committee memo. Output valid JSON only — no markdown, no preamble.\n"
+        "Write an internal VC investment committee memo. Output valid JSON only - no markdown, no preamble.\n"
         'Format: {"recommendation":"PASS"|"WATCH"|"INVEST","headline":"one brutal sentence",'
-        '"memo":"3-4 paragraph internal memo — direct, specific, uses the actual numbers",'
+        '"memo":"3-4 paragraph internal memo - direct, specific, uses the actual numbers",'
         '"red_flags":["2-4 specific concerns"],'
         '"what_would_change_our_mind":["2-3 specific conditions"]}'
     )
@@ -418,8 +418,8 @@ async def generate_vc_memo(
     system_prompt = (
         "You are a senior associate at a top-tier venture capital firm writing an internal memo. "
         "Be honest, specific, and direct. Use the actual numbers. "
-        "A PASS memo should sting — name the exact problems. "
-        "An INVEST memo should be enthusiastic but precise — name the exact opportunities. "
+        "A PASS memo should sting - name the exact problems. "
+        "An INVEST memo should be enthusiastic but precise - name the exact opportunities. "
         "Output valid JSON only."
     )
 
@@ -430,13 +430,13 @@ async def generate_vc_memo(
             f"{company_name or 'The company'} shows an ARR of ${arr:,.0f} with a gross margin of "
             f"{gm * 100:.0f}%, which is within the acceptable range for {sector}. "
             f"At the current burn rate of ${burn:,.0f}/week, the company has {months_runway:.1f} months "
-            f"of runway — insufficient to reach the next meaningful milestone without raising capital. "
+            f"of runway - insufficient to reach the next meaningful milestone without raising capital. "
             "The LTV/CAC ratio warrants monitoring but is not yet at a level that would indicate "
             "structural product-market fit problems. "
             "We recommend tracking for one more quarter before making a conviction decision."
         ),
         "red_flags": [
-            f"Runway of {months_runway:.1f} months creates urgency — raise timeline is tight",
+            f"Runway of {months_runway:.1f} months creates urgency - raise timeline is tight",
             "Churn rate needs monitoring across cohorts",
         ],
         "what_would_change_our_mind": [
@@ -509,7 +509,7 @@ async def generate_investor_update(
         f"  Survival score: {survival_score}/100\n\n"
         "Write a concise monthly investor update that a real founder would actually send. "
         "Every win and challenge must cite a specific metric from the data above. "
-        "Output valid JSON only — no markdown fences, no preamble.\n"
+        "Output valid JSON only - no markdown fences, no preamble.\n"
         'Format: {"subject":"subject line","greeting":"Hi [investors],",'
         '"metrics_block":"4-6 bullet metrics using real numbers",'
         '"wins":["specific win citing actual metric","specific win 2"],'
@@ -522,7 +522,7 @@ async def generate_investor_update(
     system_prompt = (
         "You are a startup founder writing a direct, numbers-grounded monthly investor update. "
         "Reference exact figures from the data. Wins and challenges must cite specific metrics. "
-        "Output valid JSON only — no markdown, no commentary."
+        "Output valid JSON only - no markdown, no commentary."
     )
 
     fallback = _investor_update_fallback(company_name, mrr, arr, burn, months_runway, gm, churn, ltv_cac)
@@ -557,7 +557,7 @@ def _investor_update_fallback(
     ltv_cac: float = 0,
 ) -> dict[str, Any]:
     return {
-        "subject": f"{company_name or 'Company'} — Monthly Investor Update",
+        "subject": f"{company_name or 'Company'} - Monthly Investor Update",
         "greeting": "Hi team,",
         "metrics_block": (
             f"• Weekly MRR: ${mrr:,.0f} | ARR: ${arr:,.0f}\n"
@@ -566,11 +566,11 @@ def _investor_update_fallback(
             f"• LTV/CAC: {ltv_cac:.1f}x"
         ),
         "wins": [
-            f"Gross margin held at {gm * 100:.0f}% — on track for Series A benchmarks",
+            f"Gross margin held at {gm * 100:.0f}% - on track for Series A benchmarks",
             f"LTV/CAC at {ltv_cac:.1f}x demonstrates strong unit economics",
         ],
         "challenges": [
-            f"Runway at {months_runway:.1f} months — fundraising conversations must begin soon"
+            f"Runway at {months_runway:.1f} months - fundraising conversations must begin soon"
         ],
         "next_30_days": [
             "Close 3 enterprise prospects currently in pipeline",
@@ -592,7 +592,7 @@ async def generate_pre_mortem(
     company_name: str,
     sector: str,
 ) -> list[dict[str, Any]]:
-    """Generate 3 pre-mortem failure scenarios — what kills this company in 6 months.
+    """Generate 3 pre-mortem failure scenarios - what kills this company in 6 months.
 
     Returns list of {scenario_type, title, probability_pct, primary_cause,
     warning_signs: list[str], prevention_actions: list[str], months_to_crisis: int}
@@ -745,7 +745,7 @@ async def generate_board_chat(
 
     system_prompt = (
         "You are an expert CFO coach helping a startup founder prepare for board meetings and investor calls. "
-        "You have full visibility into the company's actual financial data. Answer concisely and specifically — "
+        "You have full visibility into the company's actual financial data. Answer concisely and specifically - "
         "always ground responses in the numbers below. If asked about a metric, give the actual value. "
         "Be direct, honest, and help the founder anticipate hard questions.\n\n"
         f"{kpi_ctx}{anomaly_ctx}\n\n"

@@ -1,5 +1,5 @@
 """
-executor.py — ActionExecutor
+executor.py - ActionExecutor
 
 Executes agent actions via real integrations (Slack, email, report generation)
 or creates in-app approval requests. Safely falls back to logging when
@@ -94,7 +94,7 @@ class ActionExecutor:
             # Caller handles DB write; executor just marks success
             return ActionResult(
                 success=True,
-                message="Approval request created — awaiting founder decision",
+                message="Approval request created - awaiting founder decision",
                 data={"status": "pending_approval"},
             )
 
@@ -108,7 +108,7 @@ class ActionExecutor:
         title = action.params.get("title", "Agent Alert")
         message = action.params.get("message", "")
         log_fn = logger.warning if severity in ("WARNING", "CRITICAL") else logger.info
-        log_fn("[Agent] %s — %s", title, message)
+        log_fn("[Agent] %s - %s", title, message)
         return ActionResult(
             success=True,
             message=f"Alert logged: {title}",
@@ -120,10 +120,10 @@ class ActionExecutor:
         text = action.params.get("text", "AI CFO Agent notification")
 
         if not webhook_url:
-            logger.info("[Agent] Slack not configured — would send: %s", text[:120])
+            logger.info("[Agent] Slack not configured - would send: %s", text[:120])
             return ActionResult(
                 success=True,
-                message="Slack not configured — alert logged only",
+                message="Slack not configured - alert logged only",
                 data={"text": text, "delivered": False},
             )
 
@@ -151,10 +151,10 @@ class ActionExecutor:
         body = action.params.get("body", "")
 
         if not smtp_host or not to_addr:
-            logger.info("[Agent] Email not configured — would send to %s: %s", to_addr, subject)
+            logger.info("[Agent] Email not configured - would send to %s: %s", to_addr, subject)
             return ActionResult(
                 success=True,
-                message="Email not configured — alert logged only",
+                message="Email not configured - alert logged only",
                 data={"to": to_addr, "subject": subject, "delivered": False},
             )
 
@@ -235,7 +235,7 @@ class ActionExecutor:
             )
             return ActionResult(
                 success=True,
-                message="VC memo generated — available in dashboard",
+                message="VC memo generated - available in dashboard",
                 data={"memo": memo},
             )
         except Exception as exc:
@@ -274,7 +274,7 @@ class ActionExecutor:
             )
             return ActionResult(
                 success=True,
-                message="Investor update generated — available in dashboard",
+                message="Investor update generated - available in dashboard",
                 data={"update": update},
             )
         except Exception as exc:

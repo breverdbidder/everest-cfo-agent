@@ -27,7 +27,7 @@ export function HoverCardDemo() {
           <div className="flex flex-col gap-1">
             <h4 className="text-sm font-semibold">@nextjs</h4>
             <p className="text-sm">
-              The React Framework – created and maintained by @vercel.
+              The React Framework - created and maintained by @vercel.
             </p>
             <div className="mt-1 flex items-center gap-2">
               <CalendarIcon className="text-muted-foreground size-4" />{" "}

@@ -112,7 +112,7 @@ export function CustomerMatrix({ profiles }: Props) {
           Avg Weekly Revenue vs Weeks Active
         </p>
 
-        {/* Quadrant labels — absolutely positioned */}
+        {/* Quadrant labels - absolutely positioned */}
         <div className="relative">
           {QUADRANT_LABELS.map(({ x, y, text, cls }) => (
             <span
