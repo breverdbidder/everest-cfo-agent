@@ -9,19 +9,59 @@ Drop a CSV of weekly transactions and get a board-ready finance cockpit in ~30 s
 
 ---
 
-## Screenshots
+## Product Tour
 
-| Landing Page | Decision Engine |
-|---|---|
-| ![Landing](docs/screenshots/01-landing.png) | ![Decision Engine](docs/screenshots/07-decision-engine.png) |
+<p align="center">
+  <img src="docs/screenshots/01-landing.png" alt="Landing page with upload flow and live demo trigger" width="960" />
+</p>
+<p align="center">
+  <em>Landing page with upload, demo trigger, and CFO stack integrations.</em>
+</p>
 
-| Dashboard Overview | AI Intelligence Center |
-|---|---|
-| ![Dashboard](docs/screenshots/02-dashboard-overview.png) | ![AI Center](docs/screenshots/04-ai-intelligence-center.png) |
+<p align="center">
+  <img src="docs/linkedin-assets/progressive-loading.gif" alt="Real demo run progressively loading the dashboard" width="960" />
+</p>
+<p align="center">
+  <em>Real streamed run: sections appear progressively while the pipeline completes.</em>
+</p>
 
-| Autonomous CFO Agent | Runway Explorer |
-|---|---|
-| ![Autonomous Agent](docs/screenshots/03-autonomous-agent.png) | ![Runway](docs/screenshots/05-runway-explorer.png) |
+<p align="center">
+  <img src="docs/screenshots/07-decision-engine.png" alt="AI CFO Decision Engine with live scenario impact" width="49%" />
+  <img src="docs/screenshots/05-runway-explorer.png" alt="Runway explorer and forecast view" width="49%" />
+</p>
+<p align="center">
+  <em>Decision engine, live scenario modeling, and runway controls.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/03-autonomous-agent.png" alt="Autonomous CFO Agent activity panel" width="49%" />
+  <img src="docs/screenshots/04-ai-intelligence-center.png" alt="AI Intelligence Center reports" width="49%" />
+</p>
+<p align="center">
+  <em>Autonomous monitoring and board-facing report output.</em>
+</p>
+
+## Real-Time Pipeline Output
+
+<p align="center">
+  <img src="docs/linkedin-assets/agent-log.png" alt="Live pipeline agent log from a real demo run" width="960" />
+</p>
+<p align="center">
+  <em>Actual pipeline agent log with timestamps, agent names, and 5% → 100% progress.</em>
+</p>
+
+<p align="center">
+  <img src="docs/linkedin-assets/websocket-events.png" alt="WebSocket pipeline event frames from a real streamed run" width="960" />
+</p>
+<p align="center">
+  <em>Actual streamed frames from <code>POST /demo/async</code> and <code>ws://localhost:8000/ws/pipeline/&lt;run_id&gt;</code>.</em>
+</p>
+
+The GIF and pipeline assets in this section were generated from live local runs with:
+
+```bash
+python3 scripts/generate_linkedin_assets.py
+```
 
 ---
 
