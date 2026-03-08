@@ -11,51 +11,55 @@ Drop a CSV of weekly transactions and get a board-ready finance cockpit in ~30 s
 
 ## Product Tour
 
-<p align="center">
-  <img src="docs/screenshots/01-landing.png" alt="Landing page with upload flow and live demo trigger" width="960" />
-</p>
-<p align="center">
-  <em>Landing page with upload, demo trigger, and CFO stack integrations.</em>
-</p>
+### Landing and Upload Flow
 
-<p align="center">
-  <img src="docs/linkedin-assets/progressive-loading.gif" alt="Real demo run progressively loading the dashboard" width="960" />
-</p>
-<p align="center">
-  <em>Real streamed run: sections appear progressively while the pipeline completes.</em>
-</p>
+![Landing page with upload flow and live demo trigger](docs/screenshots/01-landing.png)
 
-<p align="center">
-  <img src="docs/screenshots/07-decision-engine.png" alt="AI CFO Decision Engine with live scenario impact" width="49%" />
-  <img src="docs/screenshots/05-runway-explorer.png" alt="Runway explorer and forecast view" width="49%" />
-</p>
-<p align="center">
-  <em>Decision engine, live scenario modeling, and runway controls.</em>
-</p>
+Landing page with upload, demo trigger, and CFO stack integrations.
 
-<p align="center">
-  <img src="docs/screenshots/03-autonomous-agent.png" alt="Autonomous CFO Agent activity panel" width="49%" />
-  <img src="docs/screenshots/04-ai-intelligence-center.png" alt="AI Intelligence Center reports" width="49%" />
-</p>
-<p align="center">
-  <em>Autonomous monitoring and board-facing report output.</em>
-</p>
+### Progressive Dashboard Loading
+
+![Real demo run progressively loading the dashboard](docs/linkedin-assets/progressive-loading.gif)
+
+Real streamed run: sections appear progressively while the pipeline completes.
+
+### Decision Engine
+
+![AI CFO Decision Engine with live scenario impact](docs/screenshots/07-decision-engine.png)
+
+Decision engine with live scenario impact, proof chips, and clickable actions.
+
+### Runway Explorer
+
+![Runway explorer and forecast view](docs/screenshots/05-runway-explorer.png)
+
+Runway controls, modeled scenarios, and cash forecast views.
+
+### Autonomous Monitoring
+
+![Autonomous CFO Agent activity panel](docs/screenshots/03-autonomous-agent.png)
+
+Autonomous monitoring and agent activity in the dashboard.
+
+### AI Report Output
+
+![AI Intelligence Center reports](docs/screenshots/04-ai-intelligence-center.png)
+
+Board-facing AI reports and generated output panels.
 
 ## Real-Time Pipeline Output
 
-<p align="center">
-  <img src="docs/linkedin-assets/agent-log.png" alt="Live pipeline agent log from a real demo run" width="960" />
-</p>
-<p align="center">
-  <em>Actual pipeline agent log with timestamps, agent names, and 5% → 100% progress.</em>
-</p>
+### Live Agent Log
 
-<p align="center">
-  <img src="docs/linkedin-assets/websocket-events.png" alt="WebSocket pipeline event frames from a real streamed run" width="960" />
-</p>
-<p align="center">
-  <em>Actual streamed frames from <code>POST /demo/async</code> and <code>ws://localhost:8000/ws/pipeline/&lt;run_id&gt;</code>.</em>
-</p>
+![Live pipeline agent log from a real demo run](docs/linkedin-assets/agent-log.png)
+
+Actual pipeline agent log with timestamps, agent names, and 5% -> 100% progress.
+
+### WebSocket Event Frames
+
+![WebSocket pipeline event frames from a real streamed run](docs/linkedin-assets/websocket-events.png)
+
+Actual streamed frames from `POST /demo/async` and `ws://localhost:8000/ws/pipeline/<run_id>`.
 
 The GIF and pipeline assets in this section were generated from live local runs with:
 
