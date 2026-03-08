@@ -1,0 +1,11 @@
+{
+  "dashboard_run_id": "a0cd1ac2-4fb1-441f-b310-21067787ef69",
+  "websocket_run_id": "f4bf6bf5-b1f9-4992-afc3-ac0ce90c285c",
+  "files": [
+    "progressive-loading.gif",
+    "agent-log.png",
+    "websocket-events.png",
+    "websocket-events.json",
+    "websocket-events.html"
+  ]
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "event_id": "88bc1e64-3f01-45f2-90ce-6f9a1d16485d",
+    "run_id": "f4bf6bf5-b1f9-4992-afc3-ac0ce90c285c",
+    "timestamp": "2026-03-08T01:39:50.002938+00:00",
+    "event_type": "pipeline_started",
+    "agent_name": null,
+    "progress": 0,
+    "data": null,
+    "message": "Pipeline execution started"
+  },
+  {
+    "event_id": "fc5aa8f3-7757-4100-b3b2-e1c1c954c4ce",
+    "run_id": "f4bf6bf5-b1f9-4992-afc3-ac0ce90c285c",
+    "timestamp": "2026-03-08T01:39:51.506184+00:00",
+    "event_type": "agent_started",
+    "agent_name": "IngestionAgent",
+    "progress": 5,
+    "data": null,
+    "message": "Parsing financial records\u2026"
+  },
+  {
+    "event_id": "30ad3a47-bf1f-42a9-8294-abe1b570f361",
+    "run_id": "f4bf6bf5-b1f9-4992-afc3-ac0ce90c285c",
+    "timestamp": "2026-03-08T01:39:52.534681+00:00",
+    "event_type": "agent_completed",
+    "agent_name": "IngestionAgent",
+    "progress": 20,
+    "data": {
+      "row_count": 3416
+    },
+    "message": "Parsed 3416 financial records"
+  }
+]
