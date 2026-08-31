@@ -1,0 +1,59 @@
+name: Deploy CFO Agent (Cloudflare Workers)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "worker/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+          command: deploy
+          secrets: |
+            CFO_AGENT_SUPABASE_URL
+            CFO_AGENT_SUPABASE_KEY
+            CFO_AGENT_SHARED_SECRET
+            DEEPSEEK_API_KEY
+        env:
+          CFO_AGENT_SUPABASE_URL: ${{ secrets.CFO_AGENT_SUPABASE_URL }}
+          CFO_AGENT_SUPABASE_KEY: ${{ secrets.CFO_AGENT_SUPABASE_KEY }}
+          CFO_AGENT_SHARED_SECRET: ${{ secrets.CFO_AGENT_SHARED_SECRET }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+
+# Required repo secrets (Settings > Secrets and variables > Actions):
+#   CLOUDFLARE_API_TOKEN    - Workers deploy permission (does NOT exist on this repo yet
+#                              as of 2026-08-31 — see issue #19646 final report)
+#   CLOUDFLARE_ACCOUNT_ID   - same
+#   CFO_AGENT_SUPABASE_URL  - set 2026-08-31 (this session)
+#   CFO_AGENT_SUPABASE_KEY  - set 2026-08-31 (this session), scoped to Postgres role cfo_agent_ro
+#   CFO_AGENT_SHARED_SECRET - single-user access gate; set 2026-08-31 (this session)
+#   DEEPSEEK_API_KEY        - optional; health-score reasoning falls back to static text if absent
+#
+# Durable Objects require the Workers Paid plan ($5/month minimum) — see docs/PORTING_NOTES.md.

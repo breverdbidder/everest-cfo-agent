@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Everest CFO Agent</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+<div id="gate" class="gate" style="display:none">
+  <h2>Everest CFO Agent</h2>
+  <p style="color:var(--text-dim)">Internal-only. Enter access key.</p>
+  <input id="gate-key" type="password" placeholder="Access key" />
+  <button id="gate-submit">Enter</button>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <h1>Everest CFO Agent</h1>
+    <p>Live from finance.* / winnerdata.* &mdash; Cloudflare Agents SDK &mdash; <span id="last-updated"></span></p>
+  </header>
+  <main>
+
+    <section>
+      <h2>Financial Health</h2>
+      <div class="grid" id="health-cards"></div>
+    </section>
+
+    <section>
+      <h2>Latest KPI Snapshot</h2>
+      <div class="grid" id="kpi-cards"></div>
+    </section>
+
+    <section>
+      <h2>Runway &amp; Scenarios</h2>
+      <div class="grid" id="runway-cards"></div>
+    </section>
+
+    <section>
+      <h2>Fraud Alerts</h2>
+      <table id="fraud-table">
+        <thead><tr><th>Week</th><th>Category</th><th>Pattern</th><th>Severity</th><th>Description</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Revenue Ledger <span class="badge badge-real">REAL</span></h2>
+      <table id="revenue-table">
+        <thead><tr><th>Date</th><th>Customer</th><th>Source</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Expense Ledger <span class="badge badge-real">REAL</span></h2>
+      <table id="expense-table">
+        <thead><tr><th>Date</th><th>Vendor</th><th>Category</th><th>Amount</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Billable FF Events <span class="badge badge-real">REAL</span> vs Pricing Comparison <span class="badge badge-projected">PROJECTED</span></h2>
+      <table id="billable-table">
+        <thead><tr><th>Delivered</th><th>Org</th><th>Tier Met</th><th>Bound</th><th>Scenario A (delivery+success)</th><th>Scenario B (flat)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Wallets</h2>
+      <table id="wallets-table">
+        <thead><tr><th>Org</th><th>Balance</th><th>Daily Burn Est.</th><th>Hard Stopped</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>CFO Checkpoints</h2>
+      <table id="checkpoints-table">
+        <thead><tr><th>Checkpoint</th><th>Status</th><th>Evidence</th><th>Updated</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Stripe Integration</h2>
+      <div class="card" id="stripe-status"></div>
+    </section>
+
+  </main>
+</div>
+
+<script src="/dashboard.js"></script>
+</body>
+</html>

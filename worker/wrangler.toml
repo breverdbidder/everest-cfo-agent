@@ -1,0 +1,23 @@
+name = "everest-cfo-agent"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[durable_objects.bindings]]
+name = "CFO_AGENT"
+class_name = "CfoAgent"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["CfoAgent"]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "404-page"
+
+# Secrets (set via `wrangler secret put` / GitHub Actions, never committed):
+#   CFO_AGENT_SUPABASE_URL   - Supabase project URL
+#   CFO_AGENT_SUPABASE_KEY   - scoped secret API key bound to Postgres role cfo_agent_ro
+#   CFO_AGENT_SHARED_SECRET  - single-user access gate (X-CFO-Secret header)
+#   DEEPSEEK_API_KEY         - optional, health-score reasoning text (falls back to static text if absent)

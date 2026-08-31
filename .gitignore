@@ -27,6 +27,12 @@ frontend/node_modules/
 frontend/.env.local
 frontend/out/
 
+# Cloudflare Workers (worker/ — Cloudflare Agents SDK rewrite, issue #19646)
+worker/node_modules/
+worker/.wrangler/
+worker/dist/
+worker/.dev.vars
+
 # macOS
 .DS_Store
 **/.DS_Store
