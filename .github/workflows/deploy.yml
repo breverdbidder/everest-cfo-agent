@@ -36,16 +36,29 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: worker
           command: deploy
+          # DEEPSEEK_API_KEY is intentionally NOT listed here — wrangler-action's `secrets:`
+          # input requires every listed name to resolve to a non-empty env value or the
+          # action fails before deploying at all. DEEPSEEK_API_KEY is genuinely optional
+          # (health-score.ts falls back to static text when it's unset), so it's pushed in
+          # its own conditional step below instead.
           secrets: |
             CFO_AGENT_SUPABASE_URL
             CFO_AGENT_SUPABASE_KEY
             CFO_AGENT_SHARED_SECRET
-            DEEPSEEK_API_KEY
         env:
           CFO_AGENT_SUPABASE_URL: ${{ secrets.CFO_AGENT_SUPABASE_URL }}
           CFO_AGENT_SUPABASE_KEY: ${{ secrets.CFO_AGENT_SUPABASE_KEY }}
           CFO_AGENT_SHARED_SECRET: ${{ secrets.CFO_AGENT_SHARED_SECRET }}
+
+      - name: Push optional DEEPSEEK_API_KEY secret
+        if: ${{ secrets.DEEPSEEK_API_KEY != '' }}
+        run: echo "$DEEPSEEK_API_KEY" | npx wrangler secret put DEEPSEEK_API_KEY
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        # GHA auto-masks any step output matching a registered `secrets.*` value, so piping
+        # it through echo here is the standard, safe wrangler CI pattern — never printed.
 
 # Required repo secrets (Settings > Secrets and variables > Actions):
 #   CLOUDFLARE_API_TOKEN    - Workers deploy permission (does NOT exist on this repo yet
