@@ -5,25 +5,25 @@ jobs:
   diag:
     runs-on: ubuntu-latest
     steps:
-      - name: Direct PostgREST test with repo secret values (never echo key)
+      - name: Test anon-apikey + custom-role Authorization pattern (never echo secrets)
+        env:
+          ANON: ${{ secrets.DIAG_ANON_KEY }}
+          JWT: ${{ secrets.DIAG_CFO_JWT }}
+          URL: ${{ secrets.CFO_AGENT_SUPABASE_URL }}
+        run: |
+          set -euo pipefail
+          echo "=== anon apikey + custom cfo_agent_ro Authorization JWT: finance.cfo_checkpoints ==="
+          code=$(curl -s -o /tmp/out1.json -w "%{http_code}" -H "apikey: $ANON" -H "Authorization: Bearer $JWT" -H "Accept-Profile: finance" "$URL/rest/v1/cfo_checkpoints?select=id,status&limit=2")
+          echo "HTTP_$code"; cat /tmp/out1.json; echo
+          echo "=== same pattern: winnerdata.wallets ==="
+          code2=$(curl -s -o /tmp/out2.json -w "%{http_code}" -H "apikey: $ANON" -H "Authorization: Bearer $JWT" -H "Accept-Profile: winnerdata" "$URL/rest/v1/wallets?select=org_id,balance_cents&limit=2")
+          echo "HTTP_$code2"; cat /tmp/out2.json; echo
+      - name: Also retest original sb_secret_ key for comparison
         env:
           KEY: ${{ secrets.CFO_AGENT_SUPABASE_KEY }}
           URL: ${{ secrets.CFO_AGENT_SUPABASE_URL }}
         run: |
           set -euo pipefail
-          echo "URL_LENGTH=${#URL}"
-          echo "URL_HOST=$(echo "$URL" | sed -E 's#https?://([^/]+).*#\1#')"
-          echo "KEY_PREFIX=$(echo "$KEY" | cut -c1-10)"
-          echo "KEY_LENGTH=${#KEY}"
-          echo "=== direct PostgREST: finance.cfo_checkpoints ==="
-          code=$(curl -s -o /tmp/out1.json -w "%{http_code}" -H "apikey: $KEY" -H "Authorization: Bearer $KEY" -H "Accept-Profile: finance" "$URL/rest/v1/cfo_checkpoints?select=id,status&limit=2")
-          echo "HTTP_$code"; cat /tmp/out1.json; echo
-      - name: Curl worker endpoints (repeat, for correlation)
-        env:
-          SECRET: ${{ secrets.CFO_AGENT_SHARED_SECRET }}
-        run: |
-          set -euo pipefail
-          BASE="https://everest-cfo-agent.brevardbidderai.workers.dev"
-          echo "=== /api/checkpoints ==="
-          code=$(curl -s -o /tmp/out2.json -w "%{http_code}" -H "X-CFO-Secret: $SECRET" "$BASE/api/checkpoints")
-          echo "HTTP_$code"; cat /tmp/out2.json; echo
+          echo "=== original sb_secret_ key: finance.cfo_checkpoints ==="
+          code=$(curl -s -o /tmp/out3.json -w "%{http_code}" -H "apikey: $KEY" -H "Authorization: Bearer $KEY" -H "Accept-Profile: finance" "$URL/rest/v1/cfo_checkpoints?select=id,status&limit=2")
+          echo "HTTP_$code"; cat /tmp/out3.json; echo
