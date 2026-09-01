@@ -60,15 +60,22 @@ jobs:
 
       - name: Create or reuse Access Group "Everest - Ariel Only"
         run: |
-          EXISTING=$(curl -s "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/groups" \
-            -H "Authorization: Bearer $CF_API_TOKEN" | \
-            python3 -c "
+          LIST_RESP=$(curl -s -w "\n%{http_code}" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/groups" \
+            -H "Authorization: Bearer $CF_API_TOKEN")
+          LIST_CODE=$(echo "$LIST_RESP" | tail -1)
+          LIST_BODY=$(echo "$LIST_RESP" | sed '$d')
+          echo "List Access groups response (HTTP $LIST_CODE): $LIST_BODY"
+          EXISTING=$(echo "$LIST_BODY" | python3 -c "
           import json,sys
           d = json.load(sys.stdin)
           for g in (d.get('result') or []):
               if g.get('name') == '$GROUP_NAME':
                   print(g['id']); break
-          " )
+          " 2>&1) || true
+          if echo "$EXISTING" | grep -qi "Traceback"; then
+            echo "::error::Failed to parse/list Access groups (HTTP $LIST_CODE). Body above."
+            exit 1
+          fi
           if [ -n "$EXISTING" ]; then
             echo "GROUP_ID=$EXISTING" >> "$GITHUB_ENV"
             echo "Reusing existing group $EXISTING"
