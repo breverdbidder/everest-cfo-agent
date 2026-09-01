@@ -73,17 +73,23 @@ jobs:
             echo "GROUP_ID=$EXISTING" >> "$GITHUB_ENV"
             echo "Reusing existing group $EXISTING"
           else
-            RESULT=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/groups" \
+            RESULT=$(curl -s -w "\n%{http_code}" -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/groups" \
               -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" \
               -d "{\"name\": \"$GROUP_NAME\", \"include\": [{\"email\": {\"email\": \"$ARIEL_EMAIL\"}}]}")
-            echo "$RESULT" | python3 -c "
+            HTTP_CODE=$(echo "$RESULT" | tail -1)
+            RESULT_BODY=$(echo "$RESULT" | sed '$d')
+            echo "Cloudflare response (HTTP $HTTP_CODE): $RESULT_BODY"
+            GROUP_ID=$(echo "$RESULT_BODY" | python3 -c "
           import json,sys
           d = json.load(sys.stdin)
           if not d.get('success'):
-              print('ERROR:', d.get('errors')); sys.exit(1)
+              sys.exit(1)
           print(d['result']['id'])
-          " > /tmp/group_id.txt
-            GROUP_ID=$(cat /tmp/group_id.txt)
+          ") || true
+            if [ -z "$GROUP_ID" ]; then
+              echo "::error::Failed to create Access group (HTTP $HTTP_CODE). See response above for the exact Cloudflare error."
+              exit 1
+            fi
             echo "GROUP_ID=$GROUP_ID" >> "$GITHUB_ENV"
             echo "Created group $GROUP_ID"
           fi
@@ -96,21 +102,27 @@ jobs:
           PAYLOAD="{\"name\": \"$APP_NAME\", \"domain\": \"$WORKER_HOSTNAME\", \"type\": \"self_hosted\", \"session_duration\": \"24h\", \"auto_redirect_to_identity\": false}"
           if [ -n "$EXISTING_APP" ]; then
             echo "Updating existing Access app $EXISTING_APP"
-            APP_RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps/$EXISTING_APP" \
+            APP_RESULT=$(curl -s -w "\n%{http_code}" -X PUT "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps/$EXISTING_APP" \
               -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" -d "$PAYLOAD")
           else
             echo "Creating new Access app"
-            APP_RESULT=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps" \
+            APP_RESULT=$(curl -s -w "\n%{http_code}" -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps" \
               -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" -d "$PAYLOAD")
           fi
-          echo "$APP_RESULT" | python3 -c "
+          APP_HTTP_CODE=$(echo "$APP_RESULT" | tail -1)
+          APP_RESULT_BODY=$(echo "$APP_RESULT" | sed '$d')
+          echo "Cloudflare response (HTTP $APP_HTTP_CODE): $APP_RESULT_BODY"
+          APP_ID=$(echo "$APP_RESULT_BODY" | python3 -c "
           import json,sys
           d = json.load(sys.stdin)
           if not d.get('success'):
-              print('ERROR:', d.get('errors')); sys.exit(1)
+              sys.exit(1)
           print(d['result']['id'])
-          " > /tmp/app_id.txt
-          APP_ID=$(cat /tmp/app_id.txt)
+          ") || true
+          if [ -z "$APP_ID" ]; then
+            echo "::error::Failed to create/update Access application (HTTP $APP_HTTP_CODE). See response above for the exact Cloudflare error."
+            exit 1
+          fi
           echo "APP_ID=$APP_ID" >> "$GITHUB_ENV"
           echo "Access app: $APP_ID ($WORKER_HOSTNAME)"
 
