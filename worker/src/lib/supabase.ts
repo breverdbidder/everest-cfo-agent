@@ -1,23 +1,35 @@
 // Data layer — reads live finance.* / winnerdata.* tables from Supabase mocerqjnksmhcjzxrewo
-// via @supabase/supabase-js, authenticated with a Supabase "secret" API key whose
-// secret_jwt_template binds it to the scoped Postgres role `cfo_agent_ro` (SELECT-only on
-// the exact tables/views listed in issue #19646 — see docs/PORTING_NOTES.md for the
-// `CREATE ROLE` + `GRANT` statements actually run against the live project, and for why
-// this key type was used instead of the legacy service_role key).
+// via @supabase/supabase-js. Auth is split across two headers, per issue #19710:
+//   apikey        — the project's legacy `anon` key (Kong gateway auth only; anon itself has
+//                    zero grants on finance/winnerdata, so holding this is not a privilege risk)
+//   Authorization — a long-lived, self-signed HS256 JWT ({role: "cfo_agent_ro", iss: "supabase"})
+//                    signed with the project's legacy jwt_secret, which is what actually
+//                    determines the effective Postgres role for RLS/grants.
+// This replaces the Management-API-minted "secret" key (secret_jwt_template bound to
+// cfo_agent_ro) from the original #19646 session — that key type proved to authenticate
+// inconsistently depending on network origin (worked from some GitHub Actions runners,
+// 401 "Invalid API key" from others and from this Worker's own Cloudflare edge, on the
+// exact same key value, at the same time). The anon+JWT split uses only the legacy
+// JWT-verification code path, which was verified consistent across all three origins.
+// See worker/docs/PORTING_NOTES.md for the full investigation and the RLS policies
+// (`cfo_agent_ro_select`) that had to be added alongside this for scoped reads to return
+// any rows at all.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { CustomerProfileRecord, RawFinancialRow } from "./types";
 
 export interface CfoEnv {
   CFO_AGENT_SUPABASE_URL: string;
+  CFO_AGENT_SUPABASE_ANON_KEY: string;
   CFO_AGENT_SUPABASE_KEY: string;
   CFO_AGENT_SHARED_SECRET: string;
   DEEPSEEK_API_KEY?: string;
 }
 
 export function getSupabaseClient(env: CfoEnv): SupabaseClient {
-  return createClient(env.CFO_AGENT_SUPABASE_URL, env.CFO_AGENT_SUPABASE_KEY, {
+  return createClient(env.CFO_AGENT_SUPABASE_URL, env.CFO_AGENT_SUPABASE_ANON_KEY, {
     auth: { persistSession: false },
+    global: { headers: { Authorization: `Bearer ${env.CFO_AGENT_SUPABASE_KEY}` } },
   });
 }
 

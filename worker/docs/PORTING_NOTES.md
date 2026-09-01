@@ -127,17 +127,118 @@ SELECT grants above, no more). A Supabase "secret" API key
 `CFO_AGENT_SUPABASE_KEY` repo secret — **never the service_role key**, per issue
 #19646 item 3.
 
-**Known open issue (found 2026-08-31, not yet resolved):** as of this session, the
-newly-created scoped key returns `401 Invalid API key` against
-`$SUPABASE_URL/rest/v1/...` even after a 15-minute propagation wait, while a
-pre-existing `secret`-type key (created Nov 2025, same project) still authenticates
+**Known open issue (found 2026-08-31, RESOLVED 2026-09-01 — see below):** as of the
+2026-08-31 session, the newly-created scoped key returned `401 Invalid API key`
+against `$SUPABASE_URL/rest/v1/...` even after a 15-minute propagation wait, while a
+pre-existing `secret`-type key (created Nov 2025, same project) still authenticated
 successfully — proven via a same-request control test. A second, disposable
 `service_role`-templated key created via the same Management API call *also* failed
-identically, which rules out anything specific to the custom `cfo_agent_ro` role
-template — this appears to be a platform-level issue with Management-API-created
-"secret" keys not propagating to this project's PostgREST gateway, not a
-misconfiguration in the role/grants (which are independently verified correct via
-direct SQL). The role, grants, and key object are all in place and the application
-code (`src/lib/supabase.ts`) is written against this key; once it starts
-authenticating (platform-side fix, or Ariel re-saving/viewing it in the Supabase
-dashboard), no code changes should be needed.
+identically, which ruled out anything specific to the custom `cfo_agent_ro` role
+template.
+
+## 2026-09-01 fix (issue #19710) — full root-cause chain
+
+The dashboard went live 2026-09-01 and every `/api/*` call 500'd with
+`"... list failed: Invalid API key"`. Investigation found **three independent,
+stacked blockers**, all now fixed:
+
+### Bug 1 — the `sb_secret_` key authenticates inconsistently by network origin
+
+Retesting the exact same `cfo_agent_worker` key (`sb_secret_FN22d...`, revealed via
+`GET /v1/projects/{ref}/api-keys?reveal=true`) ~36h after creation showed it now
+returns `200` from *some* callers and `401 Invalid API key` from others, **for the
+same key value at the same moment**:
+
+| Caller | Result |
+|---|---|
+| `cli-anything-biddeed` GHA runner (direct curl) | `200`, real data |
+| `everest-cfo-agent` GHA runner (direct curl, isolated diagnostic workflow) | `401` |
+| Deployed Cloudflare Worker (`everest-cfo-agent.brevardbidderai.workers.dev`) | `401` |
+
+This is not "wait longer" — it is a genuine Supabase platform inconsistency specific
+to Management-API-minted `secret`-type keys, most likely uneven cache state across
+Kong gateway nodes/edges. **Conclusion: do not rely on `sb_secret_`-type keys for
+this project until Supabase confirms the gateway-side caching is fixed.**
+
+### Bug 2 — `finance`/`winnerdata` were never in PostgREST's exposed-schema list
+
+`GET /v1/projects/{ref}/postgrest` showed `db_schema: "public,graphql_public,geo_tracker"`
+— `finance` and `winnerdata` were never exposed at all, independent of the key
+problem (confirmed via `PGRST106 Invalid schema` using the known-good
+`service_role` key). Worse: PATCHing `db_schema` via the Management API, and even
+two full project restarts (`soft` then `hard`), had **zero effect** on the live
+gateway. Root cause: `pg_db_role_setting` had a **database-level override**,
+`ALTER ROLE authenticator SET pgrst.db_schemas = 'public, graphql_public, pascal,
+geo_tracker'` (the `pascal` schema is unrelated pre-existing state, left in place),
+which takes precedence over the Dashboard/Management-API-managed config entirely and
+is invisible from the Management API. Fixed via:
+```sql
+ALTER ROLE authenticator SET pgrst.db_schemas =
+  'public, graphql_public, pascal, geo_tracker, finance, winnerdata';
+NOTIFY pgrst, 'reload config';
+NOTIFY pgrst, 'reload schema';
+```
+**If this project's exposed-schema list ever needs to change again, edit the
+`ALTER ROLE authenticator SET pgrst.db_schemas` value directly — the Dashboard
+"Exposed schemas" setting will not take effect while this override exists.**
+
+### Bug 3 — RLS enabled with zero policies on the target tables
+
+`finance.revenue_ledger`, `finance.expense_ledger`, `finance.invoices`,
+`winnerdata.billable_ff_events`, and `winnerdata.wallets` all have
+`relrowsecurity=true` with **no policies at all** (`finance.cfo_checkpoints` and
+`finance.entities` have RLS disabled, so they were unaffected). Default-deny RLS
+means even a perfectly authenticated `cfo_agent_ro` request would return `200` with
+an **empty array**, not an error — this would have looked like "the fix didn't
+work" with no error message to diagnose from. Fixed additively (existing policies
+on other roles untouched) via:
+```sql
+CREATE POLICY cfo_agent_ro_select ON finance.revenue_ledger FOR SELECT TO cfo_agent_ro USING (true);
+CREATE POLICY cfo_agent_ro_select ON finance.expense_ledger FOR SELECT TO cfo_agent_ro USING (true);
+CREATE POLICY cfo_agent_ro_select ON finance.invoices FOR SELECT TO cfo_agent_ro USING (true);
+CREATE POLICY cfo_agent_ro_select ON winnerdata.billable_ff_events FOR SELECT TO cfo_agent_ro USING (true);
+CREATE POLICY cfo_agent_ro_select ON winnerdata.wallets FOR SELECT TO cfo_agent_ro USING (true);
+```
+
+### The actual auth fix — anon `apikey` + self-signed `cfo_agent_ro` JWT `Authorization`
+
+Because Bug 1 shows the `sb_secret_` key type is unreliable on this project
+regardless of schema/RLS state, `src/lib/supabase.ts` no longer uses it. Instead:
+
+- **`apikey` header** = the project's legacy `anon` key (`CFO_AGENT_SUPABASE_ANON_KEY`).
+  This only has to pass Kong's gateway-identity check — Kong's legacy-JWT
+  verification path was the one origin-consistent path found during diagnosis.
+  `anon` itself has zero grants on `finance`/`winnerdata`, so holding it is not a
+  privilege escalation risk even if leaked.
+- **`Authorization` header** = a long-lived (10-year) self-signed HS256 JWT,
+  `{"role": "cfo_agent_ro", "iss": "supabase", "iat": ..., "exp": ...}`, signed with
+  the project's **legacy JWT secret** (`GET /v1/projects/{ref}/postgrest` →
+  `jwt_secret` field — same mechanism Supabase's own `anon`/`service_role` legacy
+  keys are signed with). This is what PostgREST actually uses to pick the effective
+  Postgres role; it is verified locally against `jwt_secret` on every request, with
+  no external key-registry lookup, which is why it was consistent across all three
+  network origins in testing (unlike Bug 1's `sb_secret_` key).
+  Stored as `CFO_AGENT_SUPABASE_KEY` (same secret name, new value/meaning).
+
+`getSupabaseClient()` wires this via `createClient(url, anonKey, { global: { headers:
+{ Authorization: \`Bearer ${cfoAgentRoJwt}\` } } })` — confirmed against a local HTTP
+server that supabase-js sends `apikey: <anon>` and `authorization: Bearer <jwt>` as
+two independent headers with this construction, then confirmed live against
+PostgREST directly (all 5 target tables, `200` with real rows) and against a
+temporary diagnostic GitHub Actions workflow run from the `everest-cfo-agent` repo
+(the network origin where the old key failed).
+
+**Old `cfo_agent_worker` Management-API key** (`sb_secret_FN22d...`, id
+`cad22341-1fcf-4432-b7ce-8b343a5c8720`) was left in place (not deleted) rather than
+revoked, in case Supabase's inconsistency turns out to be time-bounded and the key
+type becomes usable again later — it is simply no longer referenced by
+`CFO_AGENT_SUPABASE_KEY`.
+
+**Rotation note for future sessions:** the JWT has a 10-year expiry and is not tied
+to any Supabase UI state, so it will not silently expire soon — but if
+`jwt_secret` is ever rotated (Supabase dashboard → Settings → API → JWT Settings →
+"Rotate"), every previously-minted JWT signed with the old secret stops verifying
+immediately, including this one. There is no automatic alert for this; if
+`/api/*` starts 500ing with `Invalid API key` or `JWSError` again, re-fetch
+`jwt_secret` from `GET /v1/projects/{ref}/postgrest` and re-mint before assuming
+it's Bug 1 recurring.

@@ -17,7 +17,11 @@ binding = "ASSETS"
 not_found_handling = "404-page"
 
 # Secrets (set via `wrangler secret put` / GitHub Actions, never committed):
-#   CFO_AGENT_SUPABASE_URL   - Supabase project URL
-#   CFO_AGENT_SUPABASE_KEY   - scoped secret API key bound to Postgres role cfo_agent_ro
-#   CFO_AGENT_SHARED_SECRET  - single-user access gate (X-CFO-Secret header)
-#   DEEPSEEK_API_KEY         - optional, health-score reasoning text (falls back to static text if absent)
+#   CFO_AGENT_SUPABASE_URL       - Supabase project URL
+#   CFO_AGENT_SUPABASE_ANON_KEY  - legacy `anon` key, used only as the `apikey` header (Kong
+#                                  gateway auth) — anon has zero grants on finance/winnerdata
+#   CFO_AGENT_SUPABASE_KEY       - long-lived self-signed JWT ({role: cfo_agent_ro}), used as
+#                                  the `Authorization` header — this is what actually scopes
+#                                  Postgres access via RLS. See worker/docs/PORTING_NOTES.md.
+#   CFO_AGENT_SHARED_SECRET      - single-user access gate (X-CFO-Secret header)
+#   DEEPSEEK_API_KEY             - optional, health-score reasoning text (falls back to static text if absent)

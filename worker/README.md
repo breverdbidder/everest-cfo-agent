@@ -46,7 +46,8 @@ npx wrangler deploy --dry-run   # verify bundling without deploying
 | `CLOUDFLARE_API_TOKEN` | Workers deploy permission | **missing** — deploy will fail until added |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account | **missing** — deploy will fail until added |
 | `CFO_AGENT_SUPABASE_URL` | Supabase project URL | set |
-| `CFO_AGENT_SUPABASE_KEY` | scoped `cfo_agent_ro` key | set — see PORTING_NOTES.md for a known gateway-propagation issue with this key as of 2026-08-31 |
+| `CFO_AGENT_SUPABASE_ANON_KEY` | legacy `anon` key — used only for the `apikey` gateway header | set 2026-09-01 |
+| `CFO_AGENT_SUPABASE_KEY` | long-lived self-signed JWT, `{role: cfo_agent_ro}` — used as the `Authorization` header | set 2026-09-01, replaces the Management-API "secret" key from 2026-08-31 (see PORTING_NOTES.md) |
 | `CFO_AGENT_SHARED_SECRET` | single-user access gate | set (freshly generated) |
 | `DEEPSEEK_API_KEY` | health-score reasoning text | optional — falls back to static text if unset |
 

@@ -43,20 +43,26 @@ jobs:
           # with `wrangler secret put DEEPSEEK_API_KEY` once it exists as a repo secret.
           secrets: |
             CFO_AGENT_SUPABASE_URL
+            CFO_AGENT_SUPABASE_ANON_KEY
             CFO_AGENT_SUPABASE_KEY
             CFO_AGENT_SHARED_SECRET
         env:
           CFO_AGENT_SUPABASE_URL: ${{ secrets.CFO_AGENT_SUPABASE_URL }}
+          CFO_AGENT_SUPABASE_ANON_KEY: ${{ secrets.CFO_AGENT_SUPABASE_ANON_KEY }}
           CFO_AGENT_SUPABASE_KEY: ${{ secrets.CFO_AGENT_SUPABASE_KEY }}
           CFO_AGENT_SHARED_SECRET: ${{ secrets.CFO_AGENT_SHARED_SECRET }}
 
 # Required repo secrets (Settings > Secrets and variables > Actions):
-#   CLOUDFLARE_API_TOKEN    - Workers deploy permission (does NOT exist on this repo yet
-#                              as of 2026-08-31 — see issue #19646 final report)
-#   CLOUDFLARE_ACCOUNT_ID   - same
-#   CFO_AGENT_SUPABASE_URL  - set 2026-08-31 (this session)
-#   CFO_AGENT_SUPABASE_KEY  - set 2026-08-31 (this session), scoped to Postgres role cfo_agent_ro
-#   CFO_AGENT_SHARED_SECRET - single-user access gate; set 2026-08-31 (this session)
-#   DEEPSEEK_API_KEY        - optional; health-score reasoning falls back to static text if absent
+#   CLOUDFLARE_API_TOKEN       - Workers deploy permission
+#   CLOUDFLARE_ACCOUNT_ID      - same
+#   CFO_AGENT_SUPABASE_URL     - set 2026-08-31
+#   CFO_AGENT_SUPABASE_ANON_KEY - set 2026-09-01, legacy anon key, used only as the `apikey`
+#                                 gateway header (zero grants on finance/winnerdata on its own)
+#   CFO_AGENT_SUPABASE_KEY     - set 2026-09-01, long-lived self-signed JWT {role: cfo_agent_ro},
+#                                 used as the `Authorization` header — replaces the 2026-08-31
+#                                 Management-API "secret" key, which authenticated inconsistently
+#                                 across network origins (see worker/docs/PORTING_NOTES.md)
+#   CFO_AGENT_SHARED_SECRET    - single-user access gate; set 2026-08-31
+#   DEEPSEEK_API_KEY           - optional; health-score reasoning falls back to static text if absent
 #
 # Durable Objects require the Workers Paid plan ($5/month minimum) — see docs/PORTING_NOTES.md.
