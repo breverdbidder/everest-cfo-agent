@@ -5,17 +5,25 @@ jobs:
   diag:
     runs-on: ubuntu-latest
     steps:
-      - name: Curl live worker endpoints with real secrets (never echo secret values)
+      - name: Direct PostgREST test with repo secret values (never echo key)
+        env:
+          KEY: ${{ secrets.CFO_AGENT_SUPABASE_KEY }}
+          URL: ${{ secrets.CFO_AGENT_SUPABASE_URL }}
+        run: |
+          set -euo pipefail
+          echo "URL_LENGTH=${#URL}"
+          echo "URL_HOST=$(echo "$URL" | sed -E 's#https?://([^/]+).*#\1#')"
+          echo "KEY_PREFIX=$(echo "$KEY" | cut -c1-10)"
+          echo "KEY_LENGTH=${#KEY}"
+          echo "=== direct PostgREST: finance.cfo_checkpoints ==="
+          code=$(curl -s -o /tmp/out1.json -w "%{http_code}" -H "apikey: $KEY" -H "Authorization: Bearer $KEY" -H "Accept-Profile: finance" "$URL/rest/v1/cfo_checkpoints?select=id,status&limit=2")
+          echo "HTTP_$code"; cat /tmp/out1.json; echo
+      - name: Curl worker endpoints (repeat, for correlation)
         env:
           SECRET: ${{ secrets.CFO_AGENT_SHARED_SECRET }}
         run: |
           set -euo pipefail
           BASE="https://everest-cfo-agent.brevardbidderai.workers.dev"
-          for ep in checkpoints ledgers billable-ff; do
-            echo "=== /api/$ep ==="
-            code=$(curl -s -o /tmp/out.json -w "%{http_code}" -H "X-CFO-Secret: $SECRET" "$BASE/api/$ep")
-            echo "HTTP_$code"
-            head -c 1500 /tmp/out.json
-            echo
-            echo
-          done
+          echo "=== /api/checkpoints ==="
+          code=$(curl -s -o /tmp/out2.json -w "%{http_code}" -H "X-CFO-Secret: $SECRET" "$BASE/api/checkpoints")
+          echo "HTTP_$code"; cat /tmp/out2.json; echo
