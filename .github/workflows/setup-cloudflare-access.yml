@@ -118,9 +118,16 @@ jobs:
 
       - name: Create or update Access Application (whole-origin gate)
         run: |
-          EXISTING_APP=$(curl -s "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps?domain=$WORKER_HOSTNAME" \
-            -H "Authorization: Bearer $CF_API_TOKEN" | \
-            python3 -c "import json,sys; d=json.load(sys.stdin); r=d.get('result') or []; print(r[0]['id'] if r else '')")
+          LIST_APP_RESP=$(curl -s -w "\n%{http_code}" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps?domain=$WORKER_HOSTNAME" \
+            -H "Authorization: Bearer $CF_API_TOKEN")
+          LIST_APP_CODE=$(echo "$LIST_APP_RESP" | tail -1)
+          LIST_APP_BODY=$(echo "$LIST_APP_RESP" | sed '$d')
+          echo "List Access apps response (HTTP $LIST_APP_CODE): $LIST_APP_BODY"
+          EXISTING_APP=$(echo "$LIST_APP_BODY" | python3 -c "import json,sys; d=json.load(sys.stdin); r=d.get('result') or []; print(r[0]['id'] if r else '')" 2>&1) || true
+          if echo "$EXISTING_APP" | grep -qi "Traceback"; then
+            echo "::error::Failed to parse/list Access apps (HTTP $LIST_APP_CODE). Body above."
+            exit 1
+          fi
           PAYLOAD="{\"name\": \"$APP_NAME\", \"domain\": \"$WORKER_HOSTNAME\", \"type\": \"self_hosted\", \"session_duration\": \"24h\", \"auto_redirect_to_identity\": false}"
           if [ -n "$EXISTING_APP" ]; then
             echo "Updating existing Access app $EXISTING_APP"
@@ -164,15 +171,22 @@ jobs:
 
       - name: Create CI verification service token
         run: |
-          EXISTING_TOKEN=$(curl -s "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/service_tokens" \
-            -H "Authorization: Bearer $CF_API_TOKEN" | \
-            python3 -c "
+          LIST_ST_RESP=$(curl -s -w "\n%{http_code}" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/service_tokens" \
+            -H "Authorization: Bearer $CF_API_TOKEN")
+          LIST_ST_CODE=$(echo "$LIST_ST_RESP" | tail -1)
+          LIST_ST_BODY=$(echo "$LIST_ST_RESP" | sed '$d')
+          echo "List service tokens response (HTTP $LIST_ST_CODE): $LIST_ST_BODY"
+          EXISTING_TOKEN=$(echo "$LIST_ST_BODY" | python3 -c "
           import json,sys
           d = json.load(sys.stdin)
           for t in (d.get('result') or []):
               if t.get('name') == 'cfo-agent-ci-verify':
                   print(t['id']); break
-          ")
+          " 2>&1) || true
+          if echo "$EXISTING_TOKEN" | grep -qi "Traceback"; then
+            echo "::error::Failed to parse/list service tokens (HTTP $LIST_ST_CODE). Body above."
+            exit 1
+          fi
           if [ -n "$EXISTING_TOKEN" ]; then
             echo "Service token 'cfo-agent-ci-verify' already exists (id=$EXISTING_TOKEN) — client_secret was only shown at creation and cannot be re-read. Skipping authenticated-path verification this run; rotate the token manually if you need a fresh secret to test with."
             echo "SKIP_AUTH_VERIFY=1" >> "$GITHUB_ENV"
