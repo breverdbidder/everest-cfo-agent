@@ -1,0 +1,23 @@
+name: "TEMP: Test CFO_AGENT_SUPABASE_KEY connectivity"
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  test-key:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Curl PostgREST with scoped key (status code only)
+        env:
+          KEY: ${{ secrets.CFO_AGENT_SUPABASE_KEY }}
+          URL: ${{ secrets.CFO_AGENT_SUPABASE_URL }}
+        run: |
+          echo "::add-mask::$KEY"
+          STATUS=$(curl -s -o /tmp/resp.json -w "%{http_code}" "${URL}/rest/v1/" \
+            -H "apikey: $KEY" \
+            -H "Authorization: Bearer $KEY")
+          echo "HTTP_STATUS=$STATUS"
+          # Print response body only if it does NOT look like it contains the key itself;
+          # a 401/error body from PostgREST never echoes the request key, only a message.
+          echo "RESPONSE_BODY:"
+          cat /tmp/resp.json
