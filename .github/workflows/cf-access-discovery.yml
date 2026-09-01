@@ -1,0 +1,42 @@
+name: CF Access Discovery (read-only)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Discover Zero Trust org, Access apps, Worker metadata
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -uo pipefail
+          echo "### Zero Trust org check"
+          curl -s -w "\nHTTP_STATUS:%{http_code}\n" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/organizations" \
+            -H "Authorization: Bearer $CF_API_TOKEN"
+          echo ""
+          echo "### Existing Access apps"
+          curl -s -w "\nHTTP_STATUS:%{http_code}\n" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps" \
+            -H "Authorization: Bearer $CF_API_TOKEN"
+          echo ""
+          echo "### Existing Access groups"
+          curl -s -w "\nHTTP_STATUS:%{http_code}\n" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/groups" \
+            -H "Authorization: Bearer $CF_API_TOKEN"
+          echo ""
+          echo "### Worker scripts list"
+          curl -s -w "\nHTTP_STATUS:%{http_code}\n" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/scripts" \
+            -H "Authorization: Bearer $CF_API_TOKEN"
+          echo ""
+          echo "### Worker script detail: everest-cfo-agent"
+          curl -s -w "\nHTTP_STATUS:%{http_code}\n" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/scripts/everest-cfo-agent/settings" \
+            -H "Authorization: Bearer $CF_API_TOKEN"
+          echo ""
+          echo "### Token verify (scopes/status)"
+          curl -s -w "\nHTTP_STATUS:%{http_code}\n" "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+            -H "Authorization: Bearer $CF_API_TOKEN"
+          echo ""
