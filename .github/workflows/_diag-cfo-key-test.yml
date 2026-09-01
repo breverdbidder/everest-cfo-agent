@@ -1,0 +1,21 @@
+name: DIAG - CFO key live test (temporary)
+on:
+  workflow_dispatch: {}
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Curl live worker endpoints with real secrets (never echo secret values)
+        env:
+          SECRET: ${{ secrets.CFO_AGENT_SHARED_SECRET }}
+        run: |
+          set -euo pipefail
+          BASE="https://everest-cfo-agent.brevardbidderai.workers.dev"
+          for ep in checkpoints ledgers billable-ff; do
+            echo "=== /api/$ep ==="
+            code=$(curl -s -o /tmp/out.json -w "%{http_code}" -H "X-CFO-Secret: $SECRET" "$BASE/api/$ep")
+            echo "HTTP_$code"
+            head -c 1500 /tmp/out.json
+            echo
+            echo
+          done
