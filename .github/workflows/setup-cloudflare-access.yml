@@ -58,6 +58,21 @@ jobs:
           fi
           echo "Access is enabled — proceeding."
 
+      - name: Probe - can CF_API_TOKEN self-provision a new scoped token?
+        run: |
+          RESP=$(curl -s -w "\n%{http_code}" "https://api.cloudflare.com/client/v4/user/tokens" \
+            -H "Authorization: Bearer $CF_API_TOKEN")
+          CODE=$(echo "$RESP" | tail -1)
+          BODY=$(echo "$RESP" | sed '$d')
+          echo "GET /user/tokens response (HTTP $CODE): $BODY"
+          if [ "$CODE" = "200" ]; then
+            echo "SELF_MINT_POSSIBLE=1" >> "$GITHUB_ENV"
+            echo "Token has 'User API Tokens' read access — self-mint of a new scoped token may be possible."
+          else
+            echo "SELF_MINT_POSSIBLE=0" >> "$GITHUB_ENV"
+            echo "Token lacks 'User API Tokens' permission — cannot self-provision a new token. Manual dashboard step required."
+          fi
+
       - name: Create or reuse Access Group "Everest - Ariel Only"
         run: |
           LIST_RESP=$(curl -s -w "\n%{http_code}" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/groups" \
