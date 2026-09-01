@@ -1,0 +1,215 @@
+name: Setup Cloudflare Access (everest-cfo-agent)
+
+# Issue #19686-linked auth unification: gate everest-cfo-agent's whole origin
+# (everest-cfo-agent.brevardbidderai.workers.dev) behind Cloudflare Access
+# instead of the X-CFO-Secret header check.
+#
+# PREREQUISITE (cannot be done via API, one-time, dashboard-only):
+#   Zero Trust / Access must be enabled on this Cloudflare account first.
+#   Visit https://dash.cloudflare.com/ -> Zero Trust -> select a plan
+#   (the $0 plan is fine for a single user) -> "Enable Access".
+#   Until that is done, every call below returns:
+#     access.api.error.not_enabled: Access is not enabled.
+#   This workflow does NOT attempt to do that step — it cannot be done
+#   with an API token, only an interactive dashboard session.
+#
+# This workflow is READ+WRITE against Access config only. It does NOT touch
+# worker/src/*.ts, does NOT remove the X-CFO-Secret gate, and does NOT delete
+# CFO_AGENT_SHARED_SECRET. That happens in a follow-up commit only after the
+# "Verify Access enforces at the edge" step below is observed to pass live.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  setup-access:
+    runs-on: ubuntu-latest
+    env:
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WORKER_HOSTNAME: everest-cfo-agent.brevardbidderai.workers.dev
+      GROUP_NAME: "Everest - Ariel Only"
+      APP_NAME: "Everest CFO Agent"
+      ARIEL_EMAIL: ariel@everestcapitalusa.com
+    steps:
+      - name: Guard - required secrets present
+        run: |
+          [ -z "$CF_API_TOKEN" ] && { echo "::error::Missing CLOUDFLARE_API_TOKEN"; exit 1; }
+          [ -z "$CF_ACCOUNT_ID" ] && { echo "::error::Missing CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+          echo "Secrets present."
+
+      - name: Confirm Access is enabled on this account
+        run: |
+          RESP=$(curl -s -w "\n%{http_code}" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps" \
+            -H "Authorization: Bearer $CF_API_TOKEN")
+          CODE=$(echo "$RESP" | tail -1)
+          BODY=$(echo "$RESP" | sed '$d')
+          echo "$BODY"
+          if echo "$BODY" | grep -q "access.api.error.not_enabled"; then
+            echo "::error::Cloudflare Access is NOT enabled on this account. Visit https://dash.cloudflare.com/ -> Zero Trust -> Enable Access (one-time, dashboard-only, no API path exists). Stopping — nothing below can succeed until this is done."
+            exit 1
+          fi
+          if [ "$CODE" != "200" ]; then
+            echo "::error::Unexpected response checking Access status (HTTP $CODE). Not proceeding."
+            exit 1
+          fi
+          echo "Access is enabled — proceeding."
+
+      - name: Create or reuse Access Group "Everest - Ariel Only"
+        run: |
+          EXISTING=$(curl -s "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/groups" \
+            -H "Authorization: Bearer $CF_API_TOKEN" | \
+            python3 -c "
+          import json,sys
+          d = json.load(sys.stdin)
+          for g in (d.get('result') or []):
+              if g.get('name') == '$GROUP_NAME':
+                  print(g['id']); break
+          " )
+          if [ -n "$EXISTING" ]; then
+            echo "GROUP_ID=$EXISTING" >> "$GITHUB_ENV"
+            echo "Reusing existing group $EXISTING"
+          else
+            RESULT=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/groups" \
+              -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" \
+              -d "{\"name\": \"$GROUP_NAME\", \"include\": [{\"email\": {\"email\": \"$ARIEL_EMAIL\"}}]}")
+            echo "$RESULT" | python3 -c "
+          import json,sys
+          d = json.load(sys.stdin)
+          if not d.get('success'):
+              print('ERROR:', d.get('errors')); sys.exit(1)
+          print(d['result']['id'])
+          " > /tmp/group_id.txt
+            GROUP_ID=$(cat /tmp/group_id.txt)
+            echo "GROUP_ID=$GROUP_ID" >> "$GITHUB_ENV"
+            echo "Created group $GROUP_ID"
+          fi
+
+      - name: Create or update Access Application (whole-origin gate)
+        run: |
+          EXISTING_APP=$(curl -s "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps?domain=$WORKER_HOSTNAME" \
+            -H "Authorization: Bearer $CF_API_TOKEN" | \
+            python3 -c "import json,sys; d=json.load(sys.stdin); r=d.get('result') or []; print(r[0]['id'] if r else '')")
+          PAYLOAD="{\"name\": \"$APP_NAME\", \"domain\": \"$WORKER_HOSTNAME\", \"type\": \"self_hosted\", \"session_duration\": \"24h\", \"auto_redirect_to_identity\": false}"
+          if [ -n "$EXISTING_APP" ]; then
+            echo "Updating existing Access app $EXISTING_APP"
+            APP_RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps/$EXISTING_APP" \
+              -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" -d "$PAYLOAD")
+          else
+            echo "Creating new Access app"
+            APP_RESULT=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps" \
+              -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" -d "$PAYLOAD")
+          fi
+          echo "$APP_RESULT" | python3 -c "
+          import json,sys
+          d = json.load(sys.stdin)
+          if not d.get('success'):
+              print('ERROR:', d.get('errors')); sys.exit(1)
+          print(d['result']['id'])
+          " > /tmp/app_id.txt
+          APP_ID=$(cat /tmp/app_id.txt)
+          echo "APP_ID=$APP_ID" >> "$GITHUB_ENV"
+          echo "Access app: $APP_ID ($WORKER_HOSTNAME)"
+
+      - name: Attach allow policy for the Ariel group
+        run: |
+          RESULT=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps/$APP_ID/policies" \
+            -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" \
+            -d "{\"name\": \"Ariel Only\", \"decision\": \"allow\", \"include\": [{\"group\": {\"id\": \"$GROUP_ID\"}}], \"precedence\": 1}")
+          echo "$RESULT" | python3 -c "
+          import json,sys
+          d = json.load(sys.stdin)
+          if not d.get('success'):
+              print('ERROR (may already exist, non-fatal):', d.get('errors'))
+          else:
+              print('Policy:', d['result']['id'])
+          "
+
+      - name: Create CI verification service token
+        run: |
+          EXISTING_TOKEN=$(curl -s "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/service_tokens" \
+            -H "Authorization: Bearer $CF_API_TOKEN" | \
+            python3 -c "
+          import json,sys
+          d = json.load(sys.stdin)
+          for t in (d.get('result') or []):
+              if t.get('name') == 'cfo-agent-ci-verify':
+                  print(t['id']); break
+          ")
+          if [ -n "$EXISTING_TOKEN" ]; then
+            echo "Service token 'cfo-agent-ci-verify' already exists (id=$EXISTING_TOKEN) — client_secret was only shown at creation and cannot be re-read. Skipping authenticated-path verification this run; rotate the token manually if you need a fresh secret to test with."
+            echo "SKIP_AUTH_VERIFY=1" >> "$GITHUB_ENV"
+          else
+            RESULT=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/service_tokens" \
+              -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" \
+              -d '{"name": "cfo-agent-ci-verify", "duration": "8760h"}')
+            CLIENT_ID=$(echo "$RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin)['result']['client_id'])")
+            CLIENT_SECRET=$(echo "$RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin)['result']['client_secret'])")
+            echo "::add-mask::$CLIENT_ID"
+            echo "::add-mask::$CLIENT_SECRET"
+            echo "CF_ACCESS_CLIENT_ID=$CLIENT_ID" >> "$GITHUB_ENV"
+            echo "CF_ACCESS_CLIENT_SECRET=$CLIENT_SECRET" >> "$GITHUB_ENV"
+            # Allow the service token to reach the app too, so this run (and future manual
+            # curl checks) can prove the authenticated path without a browser OTP login.
+            POLICY_RESULT=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps/$APP_ID/policies" \
+              -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" \
+              -d "{\"name\": \"CI verification token\", \"decision\": \"non_identity\", \"include\": [{\"service_token\": {\"token_id\": \"$(echo "$RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin)['result']['id'])")\"}}], \"precedence\": 2}")
+            echo "$POLICY_RESULT" | python3 -c "
+          import json,sys
+          d = json.load(sys.stdin)
+          print('Service token policy:', d['result']['id'] if d.get('success') else d.get('errors'))
+          "
+          fi
+
+      - name: Verify - unauthenticated request hits Access, not the app
+        run: |
+          sleep 5
+          RESP=$(curl -s -D - -o /tmp/body.html "https://$WORKER_HOSTNAME/api/kpis" --max-time 15)
+          echo "$RESP" | head -20
+          CODE=$(echo "$RESP" | head -1 | grep -oE "[0-9]{3}")
+          if echo "$RESP" | grep -qi "cloudflareaccess.com\|cdn-cgi/access"; then
+            echo "PASS: request was intercepted by Cloudflare Access (redirect/login page), never reached the Worker's own auth check."
+          elif [ "$CODE" = "403" ]; then
+            echo "PASS (403 from Access edge)."
+          else
+            echo "::error::Expected an Access redirect or 403, got HTTP $CODE with no Access markers. Access may not be enforcing at the edge for this hostname yet — do not remove the X-CFO-Secret code path."
+            cat /tmp/body.html
+            exit 1
+          fi
+
+      - name: Verify - service-token-authenticated request clears Access
+        if: env.SKIP_AUTH_VERIFY != '1'
+        run: |
+          CODE=$(curl -s -o /tmp/auth_body.json -w "%{http_code}" \
+            -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+            -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+            "https://$WORKER_HOSTNAME/api/kpis" --max-time 15)
+          echo "HTTP $CODE with service token"
+          cat /tmp/auth_body.json
+          # At this point the OLD X-CFO-Secret app-level check is still live, so a 401 JSON
+          # body of {"error":"unauthorized",...} from the WORKER itself (not an Access login
+          # page) is the expected PASS signal here: it proves the request cleared Access at
+          # the edge and reached the Worker's own code, which is the thing that gets removed next.
+          if [ "$CODE" = "401" ] && grep -q '"error": "unauthorized"' /tmp/auth_body.json; then
+            echo "PASS: service token cleared Cloudflare Access and reached the Worker (still 401 from the pre-existing X-CFO-Secret check, as expected before that code is removed)."
+          else
+            echo "::warning::Unexpected result — inspect manually before removing the X-CFO-Secret code path. Got HTTP $CODE."
+          fi
+
+      - name: Summary
+        run: |
+          {
+            echo "### Cloudflare Access — everest-cfo-agent"
+            echo "- Access Application: $APP_NAME ($APP_ID) on $WORKER_HOSTNAME (whole origin gated)"
+            echo "- Access Group: $GROUP_NAME ($GROUP_ID) — ariel@everestcapitalusa.com, reusable by the LMS worker later"
+            echo "- CI verification service token: cfo-agent-ci-verify (client_secret not persisted anywhere — ephemeral, this run only)"
+            echo ""
+            echo "NEXT STEP (manual commit, not part of this workflow): once both verify steps above are green,"
+            echo "remove worker/src/auth.ts + its call site in worker/src/index.ts + the client-side gate form in"
+            echo "worker/public/index.html + dashboard.js, drop CFO_AGENT_SHARED_SECRET from deploy.yml's wrangler"
+            echo "secrets list, redeploy, re-verify /api/kpis returns real JSON with only the service-token headers"
+            echo "(no X-CFO-Secret), then delete the CFO_AGENT_SHARED_SECRET repo secret."
+          } >> "$GITHUB_STEP_SUMMARY"
