@@ -41,6 +41,24 @@ jobs:
           [ -z "$CF_ACCOUNT_ID" ] && { echo "::error::Missing CLOUDFLARE_ACCOUNT_ID"; exit 1; }
           echo "Secrets present."
 
+      - name: TEMP DIAGNOSTIC - token self-permission introspection (read-only)
+        run: |
+          RESP=$(curl -s -w "\n%{http_code}" "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+            -H "Authorization: Bearer $CF_API_TOKEN")
+          CODE=$(echo "$RESP" | tail -1)
+          BODY=$(echo "$RESP" | sed '$d')
+          echo "verify (HTTP $CODE): $BODY"
+          TOKEN_ID=$(echo "$BODY" | python3 -c "import json,sys; d=json.load(sys.stdin); print((d.get('result') or {}).get('id',''))" 2>/dev/null || true)
+          if [ -n "$TOKEN_ID" ]; then
+            RESP2=$(curl -s -w "\n%{http_code}" "https://api.cloudflare.com/client/v4/user/tokens/$TOKEN_ID" \
+              -H "Authorization: Bearer $CF_API_TOKEN")
+            CODE2=$(echo "$RESP2" | tail -1)
+            BODY2=$(echo "$RESP2" | sed '$d')
+            echo "token detail (HTTP $CODE2): $BODY2"
+          else
+            echo "No token id from verify — cannot introspect further."
+          fi
+
       - name: Confirm Access is enabled on this account
         run: |
           RESP=$(curl -s -w "\n%{http_code}" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps" \
