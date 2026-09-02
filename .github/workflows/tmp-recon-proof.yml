@@ -1,0 +1,16 @@
+name: "TEMP: recon endpoint proof (issue #19738, delete after use)"
+on:
+  workflow_dispatch: {}
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: curl /api/recon/summary and /api/recon/exceptions
+        env:
+          SECRET: ${{ secrets.CFO_AGENT_SHARED_SECRET }}
+        run: |
+          echo "=== /api/recon/summary ==="
+          curl -sS -H "X-CFO-Secret: $SECRET" "https://everest-cfo-agent.brevardbidderai.workers.dev/api/recon/summary" | tee /tmp/summary.json
+          echo
+          echo "=== /api/recon/exceptions ==="
+          curl -sS -H "X-CFO-Secret: $SECRET" "https://everest-cfo-agent.brevardbidderai.workers.dev/api/recon/exceptions" | tee /tmp/exceptions.json
