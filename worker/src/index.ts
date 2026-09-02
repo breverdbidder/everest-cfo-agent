@@ -66,6 +66,10 @@ async function handleApi(url: URL, env: Env): Promise<Response> {
         return json(await agent.getBillableFF());
       case "/api/integrations/stripe/status":
         return json(await agent.getStripeStatus());
+      case "/api/recon/summary":
+        return json(await agent.getReconSummary());
+      case "/api/recon/exceptions":
+        return json(await agent.getReconExceptions());
       default:
         return json({ error: "not_found", path: url.pathname }, 404);
     }

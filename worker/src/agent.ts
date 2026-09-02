@@ -13,6 +13,8 @@ import {
   listBillableFFEvents,
   listCheckpoints,
   listExpenseLedger,
+  listReconExceptions,
+  listReconSummary,
   listRevenueLedger,
   listWallets,
   loadRawFinancialRows,
@@ -132,6 +134,18 @@ export class CfoAgent extends Agent<Env> {
       comparison: comparison.map((c) => ({ ...c, dataClass: "PROJECTED" as const })),
       wallets,
     };
+  }
+
+  /** Issue #19738 CP6/CP7 -- bank reconciliation summary (finance.v_recon_summary). */
+  async getReconSummary() {
+    const client = getSupabaseClient(this.env);
+    return { summary: await listReconSummary(client) };
+  }
+
+  /** Issue #19738 CP6/CP7 -- bank reconciliation exceptions (finance.v_recon_exceptions). */
+  async getReconExceptions() {
+    const client = getSupabaseClient(this.env);
+    return { exceptions: await listReconExceptions(client) };
   }
 
   /**

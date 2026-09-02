@@ -189,3 +189,54 @@ export async function listWallets(client: SupabaseClient): Promise<WalletRow[]> 
 export function toCustomerProfileMap(profiles: CustomerProfileRecord[]): Record<string, CustomerProfileRecord> {
   return Object.fromEntries(profiles.map((p) => [p.customerId, p]));
 }
+
+export interface ReconSummaryRow {
+  entity_code: string;
+  period: string;
+  bank_rows: number;
+  matched: number;
+  matched_pct: number | null;
+  exceptions_open: number;
+  ledger_balance_cents: number | null;
+  bank_balance_cents: number | null;
+  variance_cents: number;
+  data_source: "REAL" | "FIXTURE" | "MIXED";
+}
+
+export interface ReconExceptionRow {
+  exception_id: string;
+  entity_code: string | null;
+  reason: string;
+  status: string;
+  txn_date: string | null;
+  amount_cents: number;
+  description: string | null;
+  data_source: "REAL" | "FIXTURE";
+  opened_at: string;
+  resolved_at: string | null;
+  resolution: string | null;
+}
+
+/** Issue #19738 CP6/CP7 -- bank reconciliation summary, entity/period rollup. */
+export async function listReconSummary(client: SupabaseClient): Promise<ReconSummaryRow[]> {
+  const { data, error } = await client
+    .schema("finance")
+    .from("v_recon_summary")
+    .select("*")
+    .order("entity_code", { ascending: true })
+    .order("period", { ascending: true });
+  if (error) throw new Error(`v_recon_summary list failed: ${error.message}`);
+  return data ?? [];
+}
+
+/** Issue #19738 CP6/CP7 -- open + resolved reconciliation exceptions. */
+export async function listReconExceptions(client: SupabaseClient, limit = 100): Promise<ReconExceptionRow[]> {
+  const { data, error } = await client
+    .schema("finance")
+    .from("v_recon_exceptions")
+    .select("*")
+    .order("opened_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`v_recon_exceptions list failed: ${error.message}`);
+  return data ?? [];
+}

@@ -87,6 +87,12 @@ main {
   border: 1px dashed rgba(245, 158, 11, 0.5);
 }
 
+.badge-fixture {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+  border: 1px dashed rgba(239, 68, 68, 0.5);
+}
+
 section { margin-bottom: 32px; }
 section h2 {
   font-size: 15px;

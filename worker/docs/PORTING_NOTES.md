@@ -242,3 +242,88 @@ immediately, including this one. There is no automatic alert for this; if
 `/api/*` starts 500ing with `Invalid API key` or `JWSError` again, re-fetch
 `jwt_secret` from `GET /v1/projects/{ref}/postgrest` and re-mint before assuming
 it's Bug 1 recurring.
+
+---
+
+## Bank reconciliation (issue #19738, CP6/CP7) — recon rules, sign conventions, Plaid prod swap
+
+`/api/recon/summary` and `/api/recon/exceptions` read `finance.v_recon_summary` /
+`finance.v_recon_exceptions` (both `security_invoker=true`, granted to `cfo_agent_ro`,
+same auth path as everything else on this page). The SQL side lives in
+`cli-anything-biddeed`'s `supabase/migrations/20260902k_recon_v1.sql` and
+`20260902l_recon_dashboard_views.sql` — this section documents what a consumer of the
+API needs to know, not the SQL itself.
+
+### Recon rules (`finance.recon_run`)
+- **R1** Stripe payout ↔ bank credit: amount equal, bank `posted_on` within
+  `arrival_date` ±3 days, descriptor mentions "stripe". Confidence 0.95.
+- **R2a** Expense ledger ↔ bank debit: amount equal, date ±3 days, vendor-name
+  substring match. Confidence 0.9.
+- **R2b** Amount-only fallback (no vendor match) within the same ±3-day window.
+  Confidence 0.6 — dashboard should flag these for manual review rather than
+  treat them as equally trustworthy as R2a.
+- **R3** Stripe processing fee, one journal entry per payout (`DR 5200 Stripe Fees /
+  CR 1100 Stripe Clearing`), posted automatically.
+- **R4** Payout landing in the bank, one journal entry per R1-matched payout
+  (`DR 1000 Bank / CR 1100 Stripe Clearing`), posted automatically.
+- R3/R4 entries for the litigation-gated entity (`everest_capital`) post as
+  **drafts** (`posted_at IS NULL`) instead of live entries — same gate as
+  `finance.post_revenue`/`post_expense` from #19716. A draft entry is excluded from
+  `v_recon_summary.ledger_balance_cents` until a human posts it, which is why that
+  column can legitimately be `null` for a period with real bank activity.
+- R1/R2 use a **mutual-nearest-match** (each side's #1 date-distance pick must be the
+  other) instead of a naive "first amount+date match wins" — a naive version produced
+  many-to-many matches whenever two same-amount transactions landed within the ±3-day
+  window of each other (verified live during CP6 build against the fixture).
+
+### Sign convention — READ BEFORE WIRING REAL PLAID DATA
+`finance.bank_transactions.amount_cents` has **no separate direction column**. This
+build uses the standard ledger convention: **positive = inflow/credit to the bank
+account, negative = outflow/debit**. This is the **opposite** of Plaid's raw
+`amount` field (Plaid: positive = money leaving the account, negative = money
+entering). Whatever ingests real Plaid transactions (issue #19737,
+`everest-bank-engine`) **must negate Plaid's raw sign on write** — `amount_cents =
+-plaid_amount` — or R1/R2 will match every real transaction backwards (credits
+read as debits and vice versa) with no error, just silently wrong reconciliation.
+Grep `cli-anything-biddeed/supabase/migrations/20260902k_recon_v1.sql` for the same
+note at the top of the file before changing either side of this contract.
+
+### FIXTURE data, and removing it once #19737 lands real rows
+As of this issue, `finance.bank_transactions` had 0 real rows (#19737's Plaid engine
+was still sandbox-only), so CP6 was built and verified against a synthetic fixture:
+`cli-anything-biddeed/scripts/load_recon_fixture.sql`, tagged via
+`finance.bank_connections.status = 'fixture'` (there's no literal `source` column on
+`bank_transactions`/`bank_connections`, so `status='fixture'` is the discriminator —
+propagates through `v_recon_summary.data_source` and `v_recon_exceptions.data_source`
+as `FIXTURE` vs `REAL` vs `MIXED`, which is exactly what the dashboard badge reads).
+Fixture rows were built from **real** `stripe.payouts` and `finance.expense_ledger`
+data, not invented numbers, so `recon_run()` itself is fully exercised — only the
+bank side is synthetic.
+
+**To remove the fixture once #19737 lands real bank_connections for an entity:**
+```sql
+delete from finance.bank_transactions where bank_account_id in (
+  select ba.id from finance.bank_accounts ba
+  join finance.bank_connections bc on bc.id = ba.connection_id
+  where bc.status = 'fixture' and bc.entity_code = '<entity>'
+);
+delete from finance.bank_accounts where connection_id in (
+  select id from finance.bank_connections where status = 'fixture' and entity_code = '<entity>'
+);
+delete from finance.bank_connections where status = 'fixture' and entity_code = '<entity>';
+-- then delete the R3/R4 journal entries + postings that were derived from fixture-only
+-- matches, and re-run finance.recon_run('<entity>') against the real feed.
+```
+Do this per-entity, not globally — a `MIXED` `data_source` reading during the
+transition (fixture for one entity, real for another) is expected and correct, not a
+bug.
+
+### Env swap for Plaid prod (once #19737 exits sandbox)
+No worker-side env changes are needed for the recon endpoints themselves — they only
+ever read `finance.v_recon_summary`/`v_recon_exceptions`, which are agnostic to
+whether the underlying `bank_connections` row is a Plaid sandbox item, a real Plaid
+item, or the fixture. The swap is entirely on `everest-bank-engine`'s side (Plaid
+`PLAID_ENV` sandbox→production, real `PLAID_CLIENT_ID`/`PLAID_SECRET`) — once that
+lands real `bank_connections.status='active'` rows with correctly-signed
+`amount_cents`, `finance.recon_run()` picks them up on its next invocation with no
+code change here.

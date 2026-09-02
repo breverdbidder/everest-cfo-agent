@@ -187,6 +187,44 @@ async function renderCheckpoints() {
   }
 }
 
+function sourceBadge(source) {
+  const cls = source === "FIXTURE" ? "badge-fixture" : source === "MIXED" ? "badge-projected" : "badge-real";
+  return `<span class="badge ${cls}">${source}</span>`;
+}
+
+async function renderRecon() {
+  try {
+    const [{ summary }, { exceptions }] = await Promise.all([
+      apiFetch("/api/recon/summary"),
+      apiFetch("/api/recon/exceptions"),
+    ]);
+    document.querySelector("#recon-summary-table tbody").innerHTML = summary.length
+      ? summary
+          .map(
+            (r) =>
+              `<tr><td>${r.entity_code}</td><td>${r.period}</td><td>${r.bank_rows}</td><td>${r.matched}</td>` +
+              `<td>${r.matched_pct === null ? "—" : r.matched_pct + "%"}</td><td>${r.exceptions_open}</td>` +
+              `<td>${fmtUsd(r.ledger_balance_cents === null ? null : r.ledger_balance_cents / 100)}</td>` +
+              `<td>${fmtUsd(r.bank_balance_cents === null ? null : r.bank_balance_cents / 100)}</td>` +
+              `<td>${fmtUsd(r.variance_cents / 100)}</td><td>${sourceBadge(r.data_source)}</td></tr>`,
+          )
+          .join("")
+      : `<tr><td colspan="10" style="color:var(--text-dim)">No reconciliation periods yet</td></tr>`;
+
+    document.querySelector("#recon-exceptions-table tbody").innerHTML = exceptions.length
+      ? exceptions
+          .map(
+            (e) =>
+              `<tr><td>${e.entity_code || "—"}</td><td>${e.txn_date || "—"}</td><td>${e.reason}</td><td>${e.status}</td>` +
+              `<td>${fmtUsd(e.amount_cents / 100)}</td><td>${e.description || "—"}</td><td>${sourceBadge(e.data_source)}</td></tr>`,
+          )
+          .join("")
+      : `<tr><td colspan="7" style="color:var(--text-dim)">No open exceptions</td></tr>`;
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 async function renderStripe() {
   try {
     const status = await apiFetch("/api/integrations/stripe/status");
@@ -209,6 +247,7 @@ async function renderAll() {
     renderBillable(),
     renderCheckpoints(),
     renderStripe(),
+    renderRecon(),
   ]);
   document.getElementById("last-updated").textContent = "updated " + new Date().toLocaleTimeString();
 }
