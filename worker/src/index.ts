@@ -70,6 +70,10 @@ async function handleApi(url: URL, env: Env): Promise<Response> {
         return json(await agent.getReconSummary());
       case "/api/recon/exceptions":
         return json(await agent.getReconExceptions());
+      case "/api/recurring-costs":
+        return json(await agent.getRecurringCosts());
+      case "/api/commingled-costs":
+        return json(await agent.getCommingledCosts());
       default:
         return json({ error: "not_found", path: url.pathname }, 404);
     }

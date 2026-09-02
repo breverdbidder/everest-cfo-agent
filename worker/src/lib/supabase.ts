@@ -240,3 +240,53 @@ export async function listReconExceptions(client: SupabaseClient, limit = 100): 
   if (error) throw new Error(`v_recon_exceptions list failed: ${error.message}`);
   return data ?? [];
 }
+
+export interface RecurringCostRow {
+  entity_code: string;
+  vendor: string;
+  account_code: string;
+  account_name: string;
+  occurrences: number;
+  first_seen: string;
+  last_seen: string;
+  cadence: "monthly" | "weekly" | "quarterly" | "irregular" | "single_occurrence";
+  last_amount_dollars: number;
+  monthly_runrate_dollars: number | null;
+}
+
+export interface CommingledCostRow {
+  txn_date: string;
+  vendor_description: string;
+  amount_dollars: number;
+  likely_business_entity: string | null;
+  note: string;
+  suggested_reclass: string;
+  bank_transaction_id: string;
+  journal_entry_id: string;
+}
+
+/** Issue #19755 CFO v1 Issue G -- recurring cost register (finance.v_recurring_costs). Feeds
+ * runway/burn once wired into the KPI engine (not done here -- issue scope is the register
+ * + dashboard section only, per K2/scope discipline). */
+export async function listRecurringCosts(client: SupabaseClient): Promise<RecurringCostRow[]> {
+  const { data, error } = await client
+    .schema("finance")
+    .from("v_recurring_costs")
+    .select("*")
+    .order("entity_code", { ascending: true })
+    .order("monthly_runrate_dollars", { ascending: false, nullsFirst: false });
+  if (error) throw new Error(`v_recurring_costs list failed: ${error.message}`);
+  return data ?? [];
+}
+
+/** Issue #19755 CFO v1 Issue G -- business infra/SaaS paid from ariel_personal
+ * (finance.v_commingled_business_costs). Tier 1 propose-only -- never auto-reclassed. */
+export async function listCommingledCosts(client: SupabaseClient): Promise<CommingledCostRow[]> {
+  const { data, error } = await client
+    .schema("finance")
+    .from("v_commingled_business_costs")
+    .select("*")
+    .order("txn_date", { ascending: false });
+  if (error) throw new Error(`v_commingled_business_costs list failed: ${error.message}`);
+  return data ?? [];
+}

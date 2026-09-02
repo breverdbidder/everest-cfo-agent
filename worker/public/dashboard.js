@@ -225,6 +225,66 @@ async function renderRecon() {
   }
 }
 
+// Issue #19755: ariel_personal must never be summed into business totals or blended in a
+// shared row list without a clear visual break -- it is a household, not a business entity
+// (see finance.entities.name for ariel_personal: "Ariel Shapira — personal (household, not
+// a business entity)").
+function isPersonalEntity(entityCode) {
+  return entityCode === "ariel_personal";
+}
+
+async function renderRecurringCosts() {
+  try {
+    const { costs } = await apiFetch("/api/recurring-costs");
+    const business = costs.filter((c) => !isPersonalEntity(c.entity_code));
+    const personal = costs.filter((c) => isPersonalEntity(c.entity_code));
+
+    const row = (c) =>
+      `<tr><td>${c.entity_code}</td><td>${c.vendor}</td><td>${c.account_name} (${c.account_code})</td>` +
+      `<td>${c.occurrences}</td><td>${c.cadence}</td><td>${fmtUsd(c.last_amount_dollars)}</td>` +
+      `<td>${c.monthly_runrate_dollars === null ? "—" : fmtUsd(c.monthly_runrate_dollars)}</td></tr>`;
+
+    const businessTotal = business.reduce((sum, c) => sum + (c.monthly_runrate_dollars || 0), 0);
+    const personalTotal = personal.reduce((sum, c) => sum + (c.monthly_runrate_dollars || 0), 0);
+
+    document.querySelector("#recurring-costs-business-table tbody").innerHTML = business.length
+      ? business.map(row).join("")
+      : `<tr><td colspan="7" style="color:var(--text-dim)">No recurring business costs detected</td></tr>`;
+    document.getElementById("recurring-costs-business-total").textContent =
+      "Business entities total run-rate: " + fmtUsd(businessTotal) + "/mo";
+
+    document.querySelector("#recurring-costs-personal-table tbody").innerHTML = personal.length
+      ? personal.map(row).join("")
+      : `<tr><td colspan="7" style="color:var(--text-dim)">No recurring personal costs detected</td></tr>`;
+    document.getElementById("recurring-costs-personal-total").textContent =
+      "ariel_personal total run-rate: " + fmtUsd(personalTotal) + "/mo (household spend -- excluded from business total above)";
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function renderCommingledCosts() {
+  try {
+    const { costs } = await apiFetch("/api/commingled-costs");
+    document.querySelector("#commingled-costs-table tbody").innerHTML = costs.length
+      ? costs
+          .map(
+            (c) =>
+              `<tr><td>${c.txn_date}</td><td>${c.vendor_description}</td><td>${fmtUsd(c.amount_dollars)}</td>` +
+              `<td>${c.likely_business_entity || "unclear — Ariel to assign"}</td><td>${c.note}</td></tr>`,
+          )
+          .join("")
+      : `<tr><td colspan="5" style="color:var(--text-dim)">No commingled business costs detected</td></tr>`;
+    const total = costs.reduce((sum, c) => sum + Number(c.amount_dollars || 0), 0);
+    document.getElementById("commingled-costs-total").textContent =
+      costs.length
+        ? `${costs.length} transactions, ${fmtUsd(total)} total, all paid from ariel_personal (Tier 1 propose-only -- no auto-reclass, Ariel reviews and approves each)`
+        : "";
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 async function renderStripe() {
   try {
     const status = await apiFetch("/api/integrations/stripe/status");
@@ -248,6 +308,8 @@ async function renderAll() {
     renderCheckpoints(),
     renderStripe(),
     renderRecon(),
+    renderRecurringCosts(),
+    renderCommingledCosts(),
   ]);
   document.getElementById("last-updated").textContent = "updated " + new Date().toLocaleTimeString();
 }

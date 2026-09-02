@@ -93,6 +93,21 @@ main {
   border: 1px dashed rgba(239, 68, 68, 0.5);
 }
 
+/* ariel_personal is a household, not a business entity (issue #19755) -- every section
+   that mixes personal + business rows must visually separate them, never sum them together. */
+.badge-personal {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--amber);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+}
+
+.entity-personal-heading { color: var(--amber); }
+
+.entity-personal-table {
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 6px;
+}
+
 section { margin-bottom: 32px; }
 section h2 {
   font-size: 15px;

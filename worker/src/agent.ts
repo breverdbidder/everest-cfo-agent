@@ -12,9 +12,11 @@ import {
   listBillableFFComparison,
   listBillableFFEvents,
   listCheckpoints,
+  listCommingledCosts,
   listExpenseLedger,
   listReconExceptions,
   listReconSummary,
+  listRecurringCosts,
   listRevenueLedger,
   listWallets,
   loadRawFinancialRows,
@@ -146,6 +148,19 @@ export class CfoAgent extends Agent<Env> {
   async getReconExceptions() {
     const client = getSupabaseClient(this.env);
     return { exceptions: await listReconExceptions(client) };
+  }
+
+  /** Issue #19755 CFO v1 Issue G -- recurring cost register (finance.v_recurring_costs). */
+  async getRecurringCosts() {
+    const client = getSupabaseClient(this.env);
+    return { costs: await listRecurringCosts(client) };
+  }
+
+  /** Issue #19755 CFO v1 Issue G -- business infra/SaaS paid from ariel_personal
+   * (finance.v_commingled_business_costs). Tier 1 propose-only. */
+  async getCommingledCosts() {
+    const client = getSupabaseClient(this.env);
+    return { costs: await listCommingledCosts(client) };
   }
 
   /**
