@@ -49,13 +49,20 @@ export function ChartCard({ title, subtitle, badge, chart, table, isEmpty, isLoa
         )}
       </div>
       {isLoading ? (
-        <div className="skeleton skeleton-chart" aria-hidden="true" />
+        <div key="loading" className="skeleton skeleton-chart" aria-hidden="true" />
       ) : isEmpty ? (
-        <div className="empty-state">{emptyReason || "No data for this selection."}</div>
+        <div key="empty" className="empty-state">
+          {emptyReason || "No data for this selection."}
+        </div>
       ) : view === "chart" ? (
-        chart
+        // Keyed so React fully unmounts/remounts across the chart<->table swap instead of
+        // reusing the same host <div> (both branches render a bare <div> in this same slot).
+        // Reuse would detach the chart div's ref (calling useECharts' cleanup, which disposes
+        // the ECharts instance and clears the node's DOM content) *after* React had already
+        // inserted the table's rows into that same node, wiping the table back to empty.
+        <React.Fragment key="chart">{chart}</React.Fragment>
       ) : (
-        table
+        <React.Fragment key="table">{table}</React.Fragment>
       )}
     </section>
   );

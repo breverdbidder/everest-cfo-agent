@@ -27,7 +27,11 @@ export async function listVizBankAccounts(client: SupabaseClient): Promise<RawBa
       current_balance_cents: r.current_balance_cents as number | null,
       data_source: (r.current_balance_cents === null ? "FIXTURE" : "REAL") as "REAL" | "FIXTURE",
     }))
-    .filter((r): r is RawBankAccount => isEntityCode(r.entity_code));
+    .filter((r): r is RawBankAccount => isEntityCode(r.entity_code))
+    // issue #19769: test fixtures must never appear in default/aggregate views. This is
+    // the single source every /api/viz/* endpoint reads accounts from (agent.ts getVizData),
+    // so excluding here covers cash, cashflow, and burn's cash-on-hand in one place.
+    .filter((r) => r.data_source !== "FIXTURE");
 }
 
 async function lookupEntityCodesByAccountId(client: SupabaseClient, ids: string[]): Promise<Map<string, EntityCode>> {

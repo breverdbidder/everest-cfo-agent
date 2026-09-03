@@ -14,9 +14,12 @@ interface TopBarProps {
   onOpenChat: () => void;
 }
 
+// protection_partners is a customer, not an Everest-owned entity (issue #19769, per #19768's
+// correction) -- excluded from the selectable list even though it still has ledger accounts
+// and remains a valid EntityCode for the "all business" aggregate and direct API queries.
 const ENTITY_OPTIONS: Array<{ value: EntitySelection; label: string }> = [
   { value: "all", label: "All business" },
-  ...ENTITY_CODES.map((c) => ({ value: c, label: ENTITY_LABELS[c] })),
+  ...ENTITY_CODES.filter((c) => c !== "protection_partners").map((c) => ({ value: c, label: ENTITY_LABELS[c] })),
 ];
 
 export function TopBar({ entity, onEntity, grain, onGrain, preset, onPreset, asOf, closeLatest, onOpenChat }: TopBarProps) {
