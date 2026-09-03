@@ -9,7 +9,11 @@ export function CloseBadge({ latest }: { latest: CfoDailyCloseRow | null }) {
   if (!latest) return null;
 
   const ageHours = (Date.now() - Date.parse(latest.run_at)) / 3_600_000;
-  const failed = latest.status !== "success";
+  // finance.cfo_daily_close.status is 'VERIFIED' | 'FAILED' (see migration
+  // 20260903b_cfo_daily_close_pipeline_19765.sql), never "success" -- this comparison always
+  // evaluated true, showing "DAILY CLOSE FAILED" on every healthy run (found live: a real
+  // status='VERIFIED', unbalanced_count=0, error=null close still rendered red/critical).
+  const failed = latest.status === "FAILED";
   const stale = ageHours > STALE_AFTER_HOURS;
   const hasIssues = latest.exceptions_open > 0 || latest.unbalanced_count > 0;
   const tone = failed || stale ? "critical" : hasIssues ? "warning" : "healthy";
