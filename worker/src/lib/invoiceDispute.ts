@@ -43,7 +43,7 @@ export function draftDisputeFallback(invoice: VendorInvoiceRow, lines: DisputeLi
     : "";
 
   const causeParagraph = goodwillReason
-    ? `The elevated usage on this invoice traces to ${goodwillReason} We identified and corrected this on our side; going forward this metric should return to its normal run-rate.`
+    ? `The elevated usage on this invoice traces to ${goodwillReason.replace(/[.,]\s*$/, "")}. Going forward this metric should return to its normal run-rate.`
     : `We are requesting the supporting usage detail for the line item above so we can reconcile it against our own records.`;
 
   const remedy = goodwillReason
