@@ -32,7 +32,9 @@
 
 .topbar-asof {
   margin: 4px 0 0;
-  color: var(--text-dim);
+  /* --text-dim is only 4.48:1 against the navy topbar -- fails WCAG AA 4.5:1 (same class of
+     issue already fixed for .control-label below; axe-core caught this instance too). */
+  color: #adbdd6;
   font-size: 12px;
 }
 
@@ -40,6 +42,12 @@
   margin-top: 6px;
   border: 1px solid currentColor;
   background: rgba(255, 255, 255, 0.04);
+}
+
+.close-badge.status-critical {
+  /* --danger (#ef4444) is only 2.71:1 against the navy topbar's blended badge background --
+     fails WCAG AA. #fca5a5 clears it at ~5.4:1 while staying clearly "red" in context. */
+  color: #fca5a5;
 }
 
 .chat-open-btn {
