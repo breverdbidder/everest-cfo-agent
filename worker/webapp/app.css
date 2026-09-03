@@ -36,6 +36,12 @@
   font-size: 12px;
 }
 
+.close-badge {
+  margin-top: 6px;
+  border: 1px solid currentColor;
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .chat-open-btn {
   background: var(--amber);
   color: var(--void);

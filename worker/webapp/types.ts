@@ -139,6 +139,20 @@ export interface ReconExceptionRow {
   resolution: string | null;
 }
 
+export interface CfoDailyCloseRow {
+  id: string;
+  run_at: string;
+  status: string;
+  exceptions_open: number;
+  unbalanced_count: number;
+  duration_ms: number | null;
+  error: string | null;
+}
+
+export interface CloseLatestResponse {
+  latest: CfoDailyCloseRow | null;
+}
+
 export interface ChatAnswer {
   answer: string;
   numbers: Record<string, unknown>;

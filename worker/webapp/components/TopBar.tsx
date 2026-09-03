@@ -1,5 +1,6 @@
 import React from "react";
-import { ENTITY_CODES, ENTITY_LABELS, type EntitySelection, type Grain, type Preset } from "../types";
+import { ENTITY_CODES, ENTITY_LABELS, type CfoDailyCloseRow, type EntitySelection, type Grain, type Preset } from "../types";
+import { CloseBadge } from "./CloseBadge";
 
 interface TopBarProps {
   entity: EntitySelection;
@@ -9,6 +10,7 @@ interface TopBarProps {
   preset: Preset;
   onPreset: (p: Preset) => void;
   asOf: string | null;
+  closeLatest: CfoDailyCloseRow | null;
   onOpenChat: () => void;
 }
 
@@ -17,7 +19,7 @@ const ENTITY_OPTIONS: Array<{ value: EntitySelection; label: string }> = [
   ...ENTITY_CODES.map((c) => ({ value: c, label: ENTITY_LABELS[c] })),
 ];
 
-export function TopBar({ entity, onEntity, grain, onGrain, preset, onPreset, asOf, onOpenChat }: TopBarProps) {
+export function TopBar({ entity, onEntity, grain, onGrain, preset, onPreset, asOf, closeLatest, onOpenChat }: TopBarProps) {
   const isPersonal = entity === "ariel_personal";
   return (
     <header className="topbar">
@@ -25,6 +27,9 @@ export function TopBar({ entity, onEntity, grain, onGrain, preset, onPreset, asO
         <div className="topbar-brand">
           <h1>Everest CFO Agent</h1>
           {asOf && <p className="topbar-asof">Live from finance.* &mdash; as of {new Date(asOf).toLocaleString()}</p>}
+          <div>
+            <CloseBadge latest={closeLatest} />
+          </div>
         </div>
         <button type="button" className="chat-open-btn" onClick={onOpenChat} aria-label="Open CFO chat">
           Ask the CFO

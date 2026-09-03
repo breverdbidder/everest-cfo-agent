@@ -15,6 +15,8 @@ import type {
   CashflowResponse,
   CashResponse,
   CategoriesResponse,
+  CfoDailyCloseRow,
+  CloseLatestResponse,
   CommingledCostRow,
   EntitySelection,
   Grain,
@@ -31,9 +33,19 @@ interface VizState {
   recurring: RecurringCostRow[];
   commingled: CommingledCostRow[];
   exceptions: ReconExceptionRow[];
+  closeLatest: CfoDailyCloseRow | null;
 }
 
-const EMPTY_VIZ: VizState = { cash: null, cashflow: null, burn: null, categories: null, recurring: [], commingled: [], exceptions: [] };
+const EMPTY_VIZ: VizState = {
+  cash: null,
+  cashflow: null,
+  burn: null,
+  categories: null,
+  recurring: [],
+  commingled: [],
+  exceptions: [],
+  closeLatest: null,
+};
 
 function Gate({ onEnter }: { onEnter: (key: string) => void }) {
   const [value, setValue] = useState("");
@@ -77,7 +89,7 @@ export function App() {
     const { from, to } = presetToRange(preset);
     const entityParam = entity === "all" ? undefined : entity;
     try {
-      const [cash, cashflow, burn, categories, recurring, commingled, exceptions] = await Promise.all([
+      const [cash, cashflow, burn, categories, recurring, commingled, exceptions, close] = await Promise.all([
         apiGet<CashResponse>("/api/viz/cash", { entity: entityParam, grain, from, to }),
         apiGet<CashflowResponse>("/api/viz/cashflow", { entity: entityParam, grain, from, to }),
         apiGet<BurnResponse>("/api/viz/burn", { entity: entityParam }),
@@ -85,8 +97,18 @@ export function App() {
         apiGet<{ costs: RecurringCostRow[] }>("/api/viz/recurring", { entity: entityParam }),
         apiGet<{ costs: CommingledCostRow[] }>("/api/viz/commingled", { entity: entityParam }),
         apiGet<{ exceptions: ReconExceptionRow[] }>("/api/viz/exceptions", { entity: entityParam }),
+        apiGet<CloseLatestResponse>("/api/close/latest").catch(() => ({ latest: null })), // issue #19765, optional
       ]);
-      setViz({ cash, cashflow, burn, categories, recurring: recurring.costs, commingled: commingled.costs, exceptions: exceptions.exceptions });
+      setViz({
+        cash,
+        cashflow,
+        burn,
+        categories,
+        recurring: recurring.costs,
+        commingled: commingled.costs,
+        exceptions: exceptions.exceptions,
+        closeLatest: close.latest,
+      });
     } catch (e) {
       if (e instanceof UnauthorizedError) {
         handleUnauthorized();
@@ -119,7 +141,17 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <TopBar entity={entity} onEntity={setEntity} grain={grain} onGrain={setGrain} preset={preset} onPreset={setPreset} asOf={viz.cash?.asOf ?? null} onOpenChat={() => setChatOpen(true)} />
+      <TopBar
+        entity={entity}
+        onEntity={setEntity}
+        grain={grain}
+        onGrain={setGrain}
+        preset={preset}
+        onPreset={setPreset}
+        asOf={viz.cash?.asOf ?? null}
+        closeLatest={viz.closeLatest}
+        onOpenChat={() => setChatOpen(true)}
+      />
       <main>
         {errorBanner && (
           <div className="error-banner" role="alert">
