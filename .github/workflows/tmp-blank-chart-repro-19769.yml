@@ -37,7 +37,15 @@ jobs:
             await page.goto(base, { waitUntil: 'networkidle' });
             await page.getByLabel('Access key').fill(secret);
             await page.getByRole('button', { name: 'Enter' }).click();
-            await page.waitForTimeout(3000);
+
+            // Live cold-start Durable Object + serial Supabase reads can take a while --
+            // poll for the loading skeletons to clear instead of a fixed short timeout.
+            try {
+              await page.waitForSelector('.skeleton-chart', { state: 'detached', timeout: 30000 });
+            } catch (e) {
+              logs.push(`skeleton-wait-timeout: ${e.message}`);
+            }
+            await page.waitForTimeout(1000);
 
             const report = [];
             const cards = await page.locator('.chart-card').all();
@@ -55,6 +63,9 @@ jobs:
             }
             require('fs').writeFileSync('/tmp/shots/report.json', JSON.stringify(report, null, 2));
             require('fs').writeFileSync('/tmp/shots/console.log', logs.join('\n'));
+            const cashCard = page.locator('.chart-card').filter({ hasText: 'Cash balance' }).first();
+            const cashHtml = await cashCard.innerHTML().catch((e) => 'ERR:' + e.message);
+            require('fs').writeFileSync('/tmp/shots/cash_card.html', cashHtml);
             console.log(JSON.stringify(report, null, 2));
             console.log('--- console/page log ---');
             console.log(logs.join('\n'));
