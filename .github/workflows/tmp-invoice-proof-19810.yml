@@ -15,7 +15,8 @@ jobs:
           node-version: "20"
 
       - name: Healthz
-        run: curl -sS "$BASE/healthz" | tee /tmp/healthz.json && echo
+        run: |
+          curl -sS "$BASE/healthz" | tee /tmp/healthz.json && echo
 
       - name: Negative test - unauthenticated GET /api/invoices must 401
         run: |
@@ -61,13 +62,16 @@ jobs:
           "
 
       - name: GET /api/invoices (list)
-        run: curl -sS -H "X-CFO-Secret: $SECRET" "$BASE/api/invoices" | tee /tmp/list.json && echo
+        run: |
+          curl -sS -H "X-CFO-Secret: $SECRET" "$BASE/api/invoices" | tee /tmp/list.json && echo
 
       - name: GET /api/invoices/:id (full 6 lines)
-        run: curl -sS -H "X-CFO-Secret: $SECRET" "$BASE/api/invoices/$INVOICE_ID" | tee /tmp/detail_pre_verify.json && echo
+        run: |
+          curl -sS -H "X-CFO-Secret: $SECRET" "$BASE/api/invoices/$INVOICE_ID" | tee /tmp/detail_pre_verify.json && echo
 
       - name: POST /api/invoices/:id/verify
-        run: curl -sS -X POST -H "X-CFO-Secret: $SECRET" "$BASE/api/invoices/$INVOICE_ID/verify" | tee /tmp/verify.json && echo
+        run: |
+          curl -sS -X POST -H "X-CFO-Secret: $SECRET" "$BASE/api/invoices/$INVOICE_ID/verify" | tee /tmp/verify.json && echo
 
       - name: POST /api/invoices/:id/dispute (propose-only, never sent)
         run: |
@@ -90,7 +94,8 @@ jobs:
             -d "$PAYLOAD" | tee /tmp/anomaly_rows.json
 
       - name: Install Playwright (ephemeral, not committed)
-        run: npm install -D playwright && npx playwright install --with-deps chromium
+        run: |
+          npm install -D playwright && npx playwright install --with-deps chromium
 
       - name: Screenshot the Invoices tab
         run: |
