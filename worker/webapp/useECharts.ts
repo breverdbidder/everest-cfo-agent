@@ -25,33 +25,39 @@ export const CHART_COLORS = {
 export const CHART_PALETTE = ["#f59e0b", "#22c55e", "#38bdf8", "#a78bfa", "#f472b6", "#facc15", "#4ade80", "#94a3b8"];
 
 /** Mounts/updates/disposes an ECharts instance on a div ref. `option` is applied with
- * notMerge=false so repeated calls (e.g. entity/grain toggles) animate cleanly. */
+ * notMerge=false so repeated calls (e.g. entity/grain toggles) animate cleanly.
+ *
+ * Init is lazy (inside the option effect, not a separate mount effect) because ChartCard
+ * only renders the `<div ref={ref}>` once loading=false -- a mount-time effect with an empty
+ * dep array fires before that div exists, leaving `ref.current` null forever and every chart
+ * permanently blank with zero errors (found live via axe/Playwright screenshot, issue
+ * #19764: all 4 charts rendered empty cards). Initializing here instead means the effect
+ * re-runs on every `option`/`deps` change, so it succeeds as soon as the div is mounted. */
 export function useECharts(option: EChartsOption | null, deps: unknown[]): React.RefObject<HTMLDivElement> {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
 
   useEffect(() => {
-    if (!ref.current) return;
-    // No named ECharts theme is registered -- charts are styled explicitly per-option
-    // (backgroundColor: transparent + CHART_COLORS text/axis colors) to match the dark
-    // brand surface instead.
-    const chart = echarts.init(ref.current, undefined, { renderer: "svg" });
-    chartRef.current = chart;
-    const onResize = () => chart.resize();
+    if (!ref.current || !option) return;
+    if (!chartRef.current) {
+      // No named ECharts theme is registered -- charts are styled explicitly per-option
+      // (backgroundColor: transparent + CHART_COLORS text/axis colors) to match the dark
+      // brand surface instead.
+      chartRef.current = echarts.init(ref.current, undefined, { renderer: "svg" });
+    }
+    chartRef.current.setOption(option, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [option, ...deps]);
+
+  useEffect(() => {
+    const onResize = () => chartRef.current?.resize();
     window.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("resize", onResize);
-      chart.dispose();
+      chartRef.current?.dispose();
       chartRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (!chartRef.current || !option) return;
-    chartRef.current.setOption(option, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
 
   return ref;
 }
