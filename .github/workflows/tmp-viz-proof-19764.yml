@@ -7,8 +7,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SECRET: ${{ secrets.CFO_AGENT_SHARED_SECRET }}
-      SUPABASE_URL: ${{ secrets.CFO_AGENT_SUPABASE_URL }}
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       BASE: https://everest-cfo-agent.brevardbidderai.workers.dev
     steps:
       - uses: actions/checkout@v4
@@ -62,21 +60,6 @@ jobs:
           if [ "$code" != "401" ]; then echo "FAIL: expected 401, got $code"; exit 1; fi
           echo "PASS: unauthenticated request correctly rejected"
 
-      - name: SQL ground truth - current bank balances + All-business exclusion
-        run: |
-          set -e
-          Q='select ba.mask, ba.name, ba.current_balance_cents, a.entity_code
-             from finance.bank_accounts ba
-             left join finance.accounts a on a.id = ba.ledger_account_id
-             order by ba.mask;'
-          PAYLOAD=$(python3 -c "import json,sys; print(json.dumps({'query': sys.argv[1]}))" "$Q")
-          echo "=== Ground truth: finance.bank_accounts current balances by entity ==="
-          curl -sS -X POST "https://api.supabase.com/v1/projects/mocerqjnksmhcjzxrewo/database/query" \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
-            -H "User-Agent: everest-cfo-agent-viz-proof/19764" \
-            -d "$PAYLOAD" | tee /tmp/ground_truth_balances.json
-
       - name: Install Playwright + axe-core (ephemeral, not committed)
         run: npm install -D playwright @axe-core/playwright && npx playwright install --with-deps chromium
 
@@ -92,7 +75,8 @@ jobs:
             const browser = await chromium.launch();
 
             // Desktop
-            const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+            const desktopCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+            const desktop = await desktopCtx.newPage();
             await desktop.goto(base, { waitUntil: 'networkidle' });
             await desktop.getByLabel('Access key').fill(secret);
             await desktop.getByRole('button', { name: 'Enter' }).click();
@@ -118,7 +102,8 @@ jobs:
             await desktop.close();
 
             // Mobile
-            const iphone = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
+            const iphoneCtx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
+            const iphone = await iphoneCtx.newPage();
             await iphone.goto(base, { waitUntil: 'networkidle' });
             await iphone.getByLabel('Access key').fill(secret);
             await iphone.getByRole('button', { name: 'Enter' }).click();
