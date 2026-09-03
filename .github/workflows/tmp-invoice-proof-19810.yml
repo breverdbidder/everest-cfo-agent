@@ -1,0 +1,140 @@
+name: "TEMP: invoice audit proof (issue #19810, delete after use)"
+on:
+  workflow_dispatch: {}
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    env:
+      SECRET: ${{ secrets.CFO_AGENT_SHARED_SECRET }}
+      BASE: https://everest-cfo-agent.brevardbidderai.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Healthz
+        run: curl -sS "$BASE/healthz" | tee /tmp/healthz.json && echo
+
+      - name: Negative test - unauthenticated GET /api/invoices must 401
+        run: |
+          code=$(curl -sS -o /tmp/unauth.json -w '%{http_code}' "$BASE/api/invoices")
+          cat /tmp/unauth.json; echo
+          echo "HTTP status: $code"
+          if [ "$code" != "401" ]; then echo "FAIL: expected 401, got $code"; exit 1; fi
+          echo "PASS: unauthenticated request correctly rejected"
+
+      - name: Ingest trigger-case Vercel invoice D2LOTNWY-0007
+        run: |
+          set -e
+          cat > /tmp/invoice.txt <<'INVOICE_EOF'
+          Vercel invoice D2LOTNWY-0007, issued 2026-08-18, $102.37, billed to brevardbidderai@gmail.com ("Ariel Shapira's projects", Pro plan):
+          Function Invocations (84,940)          $0.03
+          Build CPU Minutes (29,160)            $82.20
+          Fluid Active CPU (1)                   $0.08
+          Fast Origin Transfer (0.37)            $0.01
+          Fluid Provisioned Memory (9.49)        $0.05
+          Pro seat (Aug 18 - Sep 17)            $20.00
+          INVOICE_EOF
+          echo "=== POST /api/invoices/ingest ==="
+          curl -sS -H "X-CFO-Secret: $SECRET" \
+            -F "text=</tmp/invoice.txt" \
+            "$BASE/api/invoices/ingest?entity_code=biddeed" | tee /tmp/ingest.json
+          echo
+          python3 -c "import json; d=json.load(open('/tmp/ingest.json')); print('INVOICE_ID=' + d['invoice_id'])" >> "$GITHUB_ENV"
+
+      - name: Re-ingest (idempotency check -- same invoice, should update not duplicate)
+        run: |
+          curl -sS -H "X-CFO-Secret: $SECRET" \
+            -F "text=</tmp/invoice.txt" \
+            "$BASE/api/invoices/ingest?entity_code=biddeed" | tee /tmp/ingest_reingest.json
+          echo
+          python3 -c "
+          import json
+          a = json.load(open('/tmp/ingest.json'))
+          b = json.load(open('/tmp/ingest_reingest.json'))
+          assert a['invoice_id'] == b['invoice_id'], 'FAIL: re-ingest created a second invoice row'
+          assert b['created'] == False, 'FAIL: re-ingest reported created=True'
+          assert b['lines_inserted'] == 6, f\"FAIL: expected 6 lines on re-ingest, got {b['lines_inserted']}\"
+          print('PASS: idempotent re-ingest, same invoice_id, lines replaced not duplicated')
+          "
+
+      - name: GET /api/invoices (list)
+        run: curl -sS -H "X-CFO-Secret: $SECRET" "$BASE/api/invoices" | tee /tmp/list.json && echo
+
+      - name: GET /api/invoices/:id (full 6 lines)
+        run: curl -sS -H "X-CFO-Secret: $SECRET" "$BASE/api/invoices/$INVOICE_ID" | tee /tmp/detail_pre_verify.json && echo
+
+      - name: POST /api/invoices/:id/verify
+        run: curl -sS -X POST -H "X-CFO-Secret: $SECRET" "$BASE/api/invoices/$INVOICE_ID/verify" | tee /tmp/verify.json && echo
+
+      - name: POST /api/invoices/:id/dispute (propose-only, never sent)
+        run: |
+          curl -sS -X POST -H "X-CFO-Secret: $SECRET" -H "Content-Type: application/json" \
+            -d '{"goodwill_reason":"an automation misconfiguration in our CI/CD pipeline that produced excess automated deploys, since identified and corrected"}' \
+            "$BASE/api/invoices/$INVOICE_ID/dispute" | tee /tmp/dispute.json
+          echo
+          python3 -c "import json; d=json.load(open('/tmp/dispute.json')); assert d['sent'] == False, 'FAIL: dispute reported sent=True'; print('PASS: dispute draft only, sent=False')"
+
+      - name: Anomaly rules -- confirm recon_exceptions rows with reason invoice_anomaly
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -e
+          Q="select id, reason, status, opened_at from finance.recon_exceptions where reason ilike 'invoice_anomaly:%D2LOTNWY-0007%' order by opened_at;"
+          PAYLOAD=$(python3 -c "import json,sys; print(json.dumps({'query': sys.argv[1]}))" "$Q")
+          curl -sS -X POST "https://api.supabase.com/v1/projects/mocerqjnksmhcjzxrewo/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" \
+            -H "User-Agent: everest-cfo-agent-invoice-proof/19810" \
+            -d "$PAYLOAD" | tee /tmp/anomaly_rows.json
+
+      - name: Install Playwright (ephemeral, not committed)
+        run: npm install -D playwright && npx playwright install --with-deps chromium
+
+      - name: Screenshot the Invoices tab
+        run: |
+          mkdir -p /tmp/shots
+          node - <<'EOF'
+          const { chromium } = require('playwright');
+          (async () => {
+            const base = process.env.BASE;
+            const secret = process.env.SECRET;
+            const browser = await chromium.launch();
+            const page = await browser.newPage({ viewport: { width: 1440, height: 1400 } });
+            await page.goto(base, { waitUntil: 'networkidle' });
+            await page.getByLabel('Access key').fill(secret);
+            await page.getByRole('button', { name: 'Enter' }).click();
+            await page.waitForTimeout(2500);
+            await page.getByRole('tab', { name: 'Invoices' }).click();
+            await page.waitForTimeout(2000);
+            await page.screenshot({ path: '/tmp/shots/invoices-tab-list.png', fullPage: true });
+            // Open the ingested invoice's detail view
+            const viewBtn = page.locator('table tr', { hasText: 'D2LOTNWY-0007' }).getByRole('button', { name: 'View' });
+            if (await viewBtn.count() > 0) {
+              await viewBtn.first().click();
+              await page.waitForTimeout(1500);
+              await page.screenshot({ path: '/tmp/shots/invoices-tab-detail.png', fullPage: true });
+            } else {
+              console.log('WARN: could not locate D2LOTNWY-0007 row for detail screenshot');
+            }
+            await browser.close();
+          })().catch((e) => { console.error('SCRIPT ERROR', e); process.exit(1); });
+          EOF
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: invoice-proof-19810
+          path: |
+            /tmp/healthz.json
+            /tmp/unauth.json
+            /tmp/ingest.json
+            /tmp/ingest_reingest.json
+            /tmp/list.json
+            /tmp/detail_pre_verify.json
+            /tmp/verify.json
+            /tmp/dispute.json
+            /tmp/anomaly_rows.json
+            /tmp/shots/*.png
+          retention-days: 7
