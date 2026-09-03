@@ -11,6 +11,7 @@ import {
   getSupabaseClient,
   listBillableFFComparison,
   listBillableFFEvents,
+  listCfoDailyClose,
   listCheckpoints,
   listCommingledCosts,
   listExpenseLedger,
@@ -161,6 +162,20 @@ export class CfoAgent extends Agent<Env> {
   async getCommingledCosts() {
     const client = getSupabaseClient(this.env);
     return { costs: await listCommingledCosts(client) };
+  }
+
+  /** Issue #19765 CFO v1 Issue J -- most recent automated daily close run, for a "books
+   * current as of <timestamp>" badge (red if failed or the run is stale). */
+  async getCloseLatest() {
+    const client = getSupabaseClient(this.env);
+    const [latest] = await listCfoDailyClose(client, 1);
+    return { latest: latest ?? null };
+  }
+
+  /** Issue #19765 CFO v1 Issue J -- daily close run history. */
+  async getCloseHistory(limit: number) {
+    const client = getSupabaseClient(this.env);
+    return { history: await listCfoDailyClose(client, limit) };
   }
 
   /**

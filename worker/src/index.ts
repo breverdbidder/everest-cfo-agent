@@ -74,6 +74,12 @@ async function handleApi(url: URL, env: Env): Promise<Response> {
         return json(await agent.getRecurringCosts());
       case "/api/commingled-costs":
         return json(await agent.getCommingledCosts());
+      case "/api/close/latest":
+        return json(await agent.getCloseLatest());
+      case "/api/close/history": {
+        const limit = Number(url.searchParams.get("limit") ?? "30");
+        return json(await agent.getCloseHistory(Number.isFinite(limit) && limit > 0 ? limit : 30));
+      }
       default:
         return json({ error: "not_found", path: url.pathname }, 404);
     }

@@ -290,3 +290,32 @@ export async function listCommingledCosts(client: SupabaseClient): Promise<Commi
   if (error) throw new Error(`v_commingled_business_costs list failed: ${error.message}`);
   return data ?? [];
 }
+
+export interface CfoDailyCloseRow {
+  id: string;
+  run_at: string;
+  status: string;
+  synced_count: number;
+  categorized_count: number;
+  posted_count: number;
+  drafts_count: number;
+  matched_count: number;
+  exceptions_open: number;
+  uncategorized_open: number;
+  unbalanced_count: number;
+  duration_ms: number | null;
+  error: string | null;
+}
+
+/** Issue #19765 CFO v1 Issue J -- automated daily close runs (finance.cfo_daily_close), one row
+ * per finance.daily_close() invocation (cron-driven, 09:00 UTC). */
+export async function listCfoDailyClose(client: SupabaseClient, limit = 30): Promise<CfoDailyCloseRow[]> {
+  const { data, error } = await client
+    .schema("finance")
+    .from("cfo_daily_close")
+    .select("*")
+    .order("run_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`cfo_daily_close list failed: ${error.message}`);
+  return data ?? [];
+}
