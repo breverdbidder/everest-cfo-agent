@@ -82,7 +82,8 @@ jobs:
             await desktop.goto(base, { waitUntil: 'networkidle' });
             await desktop.getByLabel('Access key').fill(secret);
             await desktop.getByRole('button', { name: 'Enter' }).click();
-            await desktop.waitForTimeout(3000);
+            await desktop.locator('.chart-canvas svg').first().waitFor({ state: 'attached', timeout: 20000 });
+            await desktop.waitForTimeout(500);
             await desktop.screenshot({ path: '/tmp/shots/desktop-kpi-cash.png', fullPage: false });
             await desktop.screenshot({ path: '/tmp/shots/desktop-full.png', fullPage: true });
             const chartCanvasHTML = await desktop.locator('.chart-canvas').first().innerHTML().catch((e) => 'ERR:' + e.message);
@@ -111,7 +112,8 @@ jobs:
             await iphone.goto(base, { waitUntil: 'networkidle' });
             await iphone.getByLabel('Access key').fill(secret);
             await iphone.getByRole('button', { name: 'Enter' }).click();
-            await iphone.waitForTimeout(3000);
+            await iphone.locator('.chart-canvas svg').first().waitFor({ state: 'attached', timeout: 20000 });
+            await iphone.waitForTimeout(500);
             await iphone.screenshot({ path: '/tmp/shots/mobile.png', fullPage: true });
             await iphone.close();
 
