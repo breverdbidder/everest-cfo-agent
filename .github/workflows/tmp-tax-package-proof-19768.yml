@@ -1,0 +1,46 @@
+name: "TEMP: tax package proof (issue #19768, delete after use)"
+on:
+  workflow_dispatch: {}
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    env:
+      SECRET: ${{ secrets.CFO_AGENT_SHARED_SECRET }}
+      BASE: https://everest-cfo-agent.brevardbidderai.workers.dev
+    steps:
+      - name: curl GET /api/tax/package?year=2026
+        run: |
+          set -e
+          curl -sS -H "X-CFO-Secret: $SECRET" "$BASE/api/tax/package?year=2026" | tee /tmp/tax_package.json
+          echo
+          echo "=== summary ==="
+          python3 -c "
+          import json
+          d = json.load(open('/tmp/tax_package.json'))
+          print('keys:', list(d.keys()))
+          print('pnl_consolidated rows:', len(d.get('pnl_consolidated', [])))
+          print('pnl_by_product_line rows:', len(d.get('pnl_by_product_line', [])))
+          print('balance_sheet rows:', len(d.get('balance_sheet', [])))
+          print('candidates_1099 rows:', len(d.get('candidates_1099', [])))
+          print('owner_contributions rows:', len(d.get('owner_contributions', [])))
+          print('unreconciled_items rows:', len(d.get('unreconciled_items', [])))
+          print('bank_coverage rows:', len(d.get('bank_coverage', [])))
+          print('loan_schedule rows:', len(d.get('loan_schedule', [])))
+          "
+
+      - name: Negative test -- unauthenticated request must 401
+        run: |
+          code=$(curl -sS -o /tmp/unauth.json -w '%{http_code}' "$BASE/api/tax/package?year=2026")
+          cat /tmp/unauth.json
+          echo
+          echo "HTTP status: $code"
+          if [ "$code" != "401" ]; then echo "FAIL: expected 401, got $code"; exit 1; fi
+          echo "PASS: unauthenticated request correctly rejected"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tax-package-proof-19768
+          path: /tmp/tax_package.json
+          retention-days: 14
