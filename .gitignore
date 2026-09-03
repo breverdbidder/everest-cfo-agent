@@ -45,3 +45,10 @@ worker/.dev.vars
 .idea/
 .vscode/
 *.swp
+
+# CFO viz webapp build output (worker/webapp/ is the committed source; esbuild regenerates
+# these in CI before `wrangler deploy` -- issue #19764)
+worker/public/app.js
+worker/public/app.js.map
+worker/public/app.css
+worker/public/app.css.map

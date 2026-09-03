@@ -29,6 +29,9 @@ export default {
           401,
         );
       }
+      if (url.pathname === "/api/chat" && request.method === "POST") {
+        return handleChat(request, env);
+      }
       return handleApi(url, env);
     }
 
@@ -80,9 +83,63 @@ async function handleApi(url: URL, env: Env): Promise<Response> {
         const limit = Number(url.searchParams.get("limit") ?? "30");
         return json(await agent.getCloseHistory(Number.isFinite(limit) && limit > 0 ? limit : 30));
       }
+      case "/api/viz/cash":
+        return json(
+          await agent.getVizCash(
+            url.searchParams.get("entity"),
+            url.searchParams.get("grain"),
+            url.searchParams.get("from"),
+            url.searchParams.get("to"),
+          ),
+        );
+      case "/api/viz/cashflow":
+        return json(
+          await agent.getVizCashflow(
+            url.searchParams.get("entity"),
+            url.searchParams.get("grain"),
+            url.searchParams.get("from"),
+            url.searchParams.get("to"),
+          ),
+        );
+      case "/api/viz/burn":
+        return json(await agent.getVizBurn(url.searchParams.get("entity")));
+      case "/api/viz/categories":
+        return json(
+          await agent.getVizCategories(
+            url.searchParams.get("entity"),
+            url.searchParams.get("from"),
+            url.searchParams.get("to"),
+            url.searchParams.get("period"),
+          ),
+        );
+      case "/api/viz/recurring":
+        return json(await agent.getVizRecurring(url.searchParams.get("entity")));
+      case "/api/viz/commingled":
+        return json(await agent.getVizCommingled(url.searchParams.get("entity")));
+      case "/api/viz/exceptions":
+        return json(await agent.getVizExceptions(url.searchParams.get("entity")));
       default:
         return json({ error: "not_found", path: url.pathname }, 404);
     }
+  } catch (err) {
+    return json({ error: "internal_error", message: (err as Error).message }, 500);
+  }
+}
+
+async function handleChat(request: Request, env: Env): Promise<Response> {
+  let body: { question?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "bad_request", message: "Body must be JSON: {question: string}" }, 400);
+  }
+  const question = typeof body.question === "string" ? body.question.trim() : "";
+  if (!question || question.length > 500) {
+    return json({ error: "bad_request", message: "question must be a non-empty string, max 500 chars" }, 400);
+  }
+  const agent = await getAgentByName<Env, CfoAgent>(env.CFO_AGENT, "ariel-cfo");
+  try {
+    return json(await agent.postChat(question));
   } catch (err) {
     return json({ error: "internal_error", message: (err as Error).message }, 500);
   }

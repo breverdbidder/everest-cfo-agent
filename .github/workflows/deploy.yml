@@ -26,8 +26,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Type check
+      - name: Type check (Worker)
         run: npx tsc --noEmit
+
+      - name: Type check (viz webapp)
+        run: npx tsc -p webapp/tsconfig.json --noEmit
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build viz webapp (esbuild -> public/app.js + public/app.css)
+        run: npm run build:webapp
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
