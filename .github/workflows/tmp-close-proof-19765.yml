@@ -1,0 +1,16 @@
+name: "TEMP: daily close endpoint proof (issue #19765, delete after use)"
+on:
+  workflow_dispatch: {}
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: curl /api/close/latest and /api/close/history
+        env:
+          SECRET: ${{ secrets.CFO_AGENT_SHARED_SECRET }}
+        run: |
+          echo "=== /api/close/latest ==="
+          curl -sS -H "X-CFO-Secret: $SECRET" "https://everest-cfo-agent.brevardbidderai.workers.dev/api/close/latest" | tee /tmp/latest.json
+          echo
+          echo "=== /api/close/history?limit=5 ==="
+          curl -sS -H "X-CFO-Secret: $SECRET" "https://everest-cfo-agent.brevardbidderai.workers.dev/api/close/history?limit=5" | tee /tmp/history.json
