@@ -83,6 +83,10 @@ async function handleApi(url: URL, env: Env): Promise<Response> {
         const limit = Number(url.searchParams.get("limit") ?? "30");
         return json(await agent.getCloseHistory(Number.isFinite(limit) && limit > 0 ? limit : 30));
       }
+      case "/api/tax/package": {
+        const year = Number(url.searchParams.get("year") ?? "2026");
+        return json(await agent.getTaxPackage(Number.isFinite(year) && year > 2000 ? year : 2026));
+      }
       case "/api/viz/cash":
         return json(
           await agent.getVizCash(

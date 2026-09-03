@@ -319,3 +319,14 @@ export async function listCfoDailyClose(client: SupabaseClient, limit = 30): Pro
   if (error) throw new Error(`cfo_daily_close list failed: ${error.message}`);
   return data ?? [];
 }
+
+/** Issue #19768 CFO v1 Issue K -- tax-year year-end package (P&L by tax_line, balance sheet,
+ * per-product-line P&L, 1099 candidates, owner contributions, loan schedule, unreconciled items,
+ * bank coverage/completeness banner). Backed by public.bank_engine_tax_package(p_year), a
+ * SECURITY DEFINER wrapper around finance.* (PostgREST only exposes `public`, same reason every
+ * other bank_engine_* wrapper exists). Returns the RPC's single jsonb blob as-is. */
+export async function getTaxPackage(client: SupabaseClient, year: number): Promise<Record<string, unknown>> {
+  const { data, error } = await client.rpc("bank_engine_tax_package", { p_year: year });
+  if (error) throw new Error(`bank_engine_tax_package failed: ${error.message}`);
+  return (data as Record<string, unknown>) ?? {};
+}

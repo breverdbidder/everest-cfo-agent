@@ -21,6 +21,7 @@ import {
   listRevenueLedger,
   listWallets,
   loadRawFinancialRows,
+  getTaxPackage as fetchTaxPackage,
 } from "./lib/supabase";
 import { computeKpiSnapshots, detectStatisticalAnomalies } from "./lib/kpi-engine";
 import { computeCustomerProfiles, detectFraudPatterns } from "./lib/fraud";
@@ -190,6 +191,13 @@ export class CfoAgent extends Agent<Env> {
   async getCloseHistory(limit: number) {
     const client = getSupabaseClient(this.env);
     return { history: await listCfoDailyClose(client, limit) };
+  }
+
+  /** Issue #19768 CFO v1 Issue K -- tax-year year-end package. #19764 owns the dashboard UI;
+   * this is the read endpoint for it (and for Ariel's CPA hand-off) to consume. */
+  async getTaxPackage(year: number) {
+    const client = getSupabaseClient(this.env);
+    return await fetchTaxPackage(client, year);
   }
 
   /** Issue #19764 -- shared read of every viz data source, cached alongside the KPI
