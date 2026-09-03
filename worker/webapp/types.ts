@@ -160,3 +160,45 @@ export interface ChatAnswer {
   refused: boolean;
   entity: string;
 }
+
+// Issue #19810 CFO v1 Issue M -- invoice audit. Mirrors worker/src/lib/vendorInvoices.ts.
+export type InvoiceStatus = "received" | "verified" | "disputed" | "paid" | "credited";
+
+export interface VendorInvoiceRow {
+  id: string;
+  vendor: string;
+  invoice_number: string;
+  issued_on: string;
+  due_on: string | null;
+  currency: string;
+  subtotal_cents: number | null;
+  total_cents: number;
+  entity_code: string | null;
+  status: InvoiceStatus;
+  source_file: string | null;
+  extraction_method: string | null;
+  bank_transaction_id: string | null;
+  dispute_draft: string | null;
+  dispute_draft_at: string | null;
+  created_at: string;
+}
+
+export interface VendorInvoiceLineRow {
+  id: string;
+  invoice_id: string;
+  description: string;
+  qty: number | null;
+  unit_price_cents: number | null;
+  amount_cents: number;
+  metric_name: string | null;
+  verified_qty: number | null;
+  variance_pct: number | null;
+  verdict: string | null;
+  evidence: Record<string, unknown> | null;
+}
+
+export interface AnomalyFinding {
+  rule: string;
+  line_id?: string;
+  reason: string;
+}

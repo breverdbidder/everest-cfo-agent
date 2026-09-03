@@ -10,6 +10,7 @@ import { CategoryDonut } from "./components/CategoryDonut";
 import { CommingledTable } from "./components/CommingledTable";
 import { ExceptionsTable } from "./components/ExceptionsTable";
 import { ChatDrawer } from "./components/ChatDrawer";
+import { InvoicesPanel } from "./components/InvoicesPanel";
 import type {
   BurnResponse,
   CashflowResponse,
@@ -68,8 +69,11 @@ function Gate({ onEnter }: { onEnter: (key: string) => void }) {
   );
 }
 
+type Tab = "dashboard" | "invoices";
+
 export function App() {
   const [authed, setAuthed] = useState(() => !!getKey());
+  const [tab, setTab] = useState<Tab>("dashboard");
   const [entity, setEntity] = useState<EntitySelection>("all");
   const [grain, setGrain] = useState<Grain>("month");
   const [preset, setPreset] = useState<Preset>("90d");
@@ -152,26 +156,40 @@ export function App() {
         closeLatest={viz.closeLatest}
         onOpenChat={() => setChatOpen(true)}
       />
+      <nav className="app-tabs" role="tablist" aria-label="Sections">
+        <button type="button" role="tab" aria-selected={tab === "dashboard"} className={tab === "dashboard" ? "toggle-active" : ""} onClick={() => setTab("dashboard")}>
+          Dashboard
+        </button>
+        <button type="button" role="tab" aria-selected={tab === "invoices"} className={tab === "invoices" ? "toggle-active" : ""} onClick={() => setTab("invoices")}>
+          Invoices
+        </button>
+      </nav>
       <main>
         {errorBanner && (
           <div className="error-banner" role="alert">
             {errorBanner}
           </div>
         )}
-        <KpiStrip
-          cashOnHandCents={viz.burn?.cashOnHandCents ?? null}
-          netCashflow30dCents={netCashflow30d}
-          monthlyBurnCents={lastBurnMonth?.expense_cents ?? null}
-          runwayMonths={viz.burn?.runwayMonths ?? null}
-          openExceptions={viz.exceptions.length > 0 ? openExceptions : null}
-          loading={loading}
-        />
-        <CashChart data={viz.cash} loading={loading} />
-        <CashflowChart data={viz.cashflow} loading={loading} />
-        <BurnChart data={viz.burn} recurring={viz.recurring} loading={loading} />
-        <CategoryDonut data={viz.categories} loading={loading} />
-        <CommingledTable rows={viz.commingled} loading={loading} />
-        <ExceptionsTable rows={viz.exceptions} loading={loading} />
+        {tab === "invoices" ? (
+          <InvoicesPanel onUnauthorized={handleUnauthorized} />
+        ) : (
+          <>
+            <KpiStrip
+              cashOnHandCents={viz.burn?.cashOnHandCents ?? null}
+              netCashflow30dCents={netCashflow30d}
+              monthlyBurnCents={lastBurnMonth?.expense_cents ?? null}
+              runwayMonths={viz.burn?.runwayMonths ?? null}
+              openExceptions={viz.exceptions.length > 0 ? openExceptions : null}
+              loading={loading}
+            />
+            <CashChart data={viz.cash} loading={loading} />
+            <CashflowChart data={viz.cashflow} loading={loading} />
+            <BurnChart data={viz.burn} recurring={viz.recurring} loading={loading} />
+            <CategoryDonut data={viz.categories} loading={loading} />
+            <CommingledTable rows={viz.commingled} loading={loading} />
+            <ExceptionsTable rows={viz.exceptions} loading={loading} />
+          </>
+        )}
       </main>
       <ChatDrawer open={chatOpen} onClose={() => setChatOpen(false)} onUnauthorized={handleUnauthorized} />
     </div>

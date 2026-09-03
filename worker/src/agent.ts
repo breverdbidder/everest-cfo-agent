@@ -43,6 +43,18 @@ import { computeBurn, computeCashflow, computeCashSeries, computeCategories, tot
 import type { VizDataBundle } from "./lib/viz-types";
 import { answerCfoChatQuestion, type ChatAnswer } from "./lib/chat";
 import { logChatQuery } from "./lib/ops-log";
+import {
+  checkAnomalies,
+  getInvoice,
+  ingestInvoice,
+  listInvoices,
+  saveDisputeDraft,
+  setInvoiceStatus,
+  writeLineVerification,
+  type ExtractedInvoice,
+} from "./lib/vendorInvoices";
+import { verifyInvoiceLines } from "./lib/vendorAdapters";
+import { draftDispute, type DisputeLineContext } from "./lib/invoiceDispute";
 
 const ANALYSIS_CACHE_TTL_MS = 120_000; // mirrors health_score.py's _CACHE_TTL = 120s
 
@@ -309,6 +321,88 @@ export class CfoAgent extends Agent<Env> {
     const rowCount = (numbers.rows ?? numbers.months ?? numbers.buckets ?? numbers.categories ?? numbers.byAccount ?? []).length;
     await logChatQuery(client, { entity: answer.entity, question, sql: answer.sql, refused: answer.refused, rowCount });
     return answer;
+  }
+
+  // Issue #19810 CFO v1 Issue M -- invoice audit capability. Reads go direct (cfo_agent_ro RLS
+  // grant); writes go through the public.cfo_invoice_* SECURITY DEFINER RPCs (this Worker
+  // holds no service_role key, same constraint documented at the top of ./lib/supabase.ts).
+
+  async listInvoices() {
+    const client = getSupabaseClient(this.env);
+    return { invoices: await listInvoices(client) };
+  }
+
+  async getInvoiceDetail(invoiceId: string) {
+    const client = getSupabaseClient(this.env);
+    const result = await getInvoice(client, invoiceId);
+    return result ?? { invoice: null, lines: [] };
+  }
+
+  async ingestInvoice(extracted: ExtractedInvoice, params: { entityCode: string | null; sourceFile: string | null; rawText: string; extractionMethod: string }) {
+    const client = getSupabaseClient(this.env);
+    const result = await ingestInvoice(client, extracted, params);
+    // Best-effort: anomaly check runs immediately on ingest so a fresh invoice shows its
+    // flags without a separate manual step. Never blocks the ingest response on failure.
+    let anomalies: unknown = null;
+    try {
+      anomalies = await checkAnomalies(client, result.invoice_id);
+    } catch (err) {
+      anomalies = { error: String((err as Error).message ?? err) };
+    }
+    return {
+      invoice_id: result.invoice_id,
+      created: result.created,
+      lines_inserted: result.lines_inserted,
+      bank_transaction_id: result.bank_transaction_id,
+      anomalies,
+      extraction_method: params.extractionMethod,
+      extracted,
+    };
+  }
+
+  /** Dispatches each line to its vendor adapter (./lib/vendorAdapters.ts), persists whatever
+   * the adapter returns via cfo_invoice_write_verification (never a fabricated number -- an
+   * adapter with no credential returns UNVERIFIABLE, which is written as-is), flips the
+   * invoice to status='verified' (meaning "reviewed," not "all lines matched"), then re-runs
+   * the anomaly check now that variance_pct may be populated (rule 2). */
+  async verifyInvoice(invoiceId: string) {
+    const client = getSupabaseClient(this.env);
+    const detail = await getInvoice(client, invoiceId);
+    if (!detail) throw new Error(`no invoice ${invoiceId}`);
+
+    const results = await verifyInvoiceLines(client, detail.invoice, detail.lines);
+    for (const { line, result } of results) {
+      await writeLineVerification(client, {
+        lineId: line.id,
+        verifiedQty: result.verified_qty,
+        variancePct: result.variance_pct,
+        verdict: result.verdict,
+        evidence: result.evidence,
+      });
+    }
+    await setInvoiceStatus(client, invoiceId, "verified");
+    const anomalies = await checkAnomalies(client, invoiceId);
+    const refreshed = await getInvoice(client, invoiceId);
+    return { invoice: refreshed?.invoice ?? null, lines: refreshed?.lines ?? [], anomalies };
+  }
+
+  /** Tier 1 propose-only (issue non-goal: "No auto-sending any dispute or email to a vendor").
+   * Persists the draft via cfo_invoice_save_dispute and returns it; nothing here sends
+   * anything. `goodwillReason` lets the caller (index.ts) pass a known, already-remediated
+   * root cause (e.g. the trigger case's GHA run-storm fix) so the draft asks for a goodwill
+   * credit instead of disputing the vendor's meter when usage genuinely occurred. */
+  async draftInvoiceDispute(invoiceId: string, goodwillReason: string | null) {
+    const client = getSupabaseClient(this.env);
+    const detail = await getInvoice(client, invoiceId);
+    if (!detail) throw new Error(`no invoice ${invoiceId}`);
+
+    const anomalies = await checkAnomalies(client, invoiceId).catch(() => ({ findings: [] as Array<{ line_id?: string; reason: string }> }));
+    const findingByLineId = new Map(anomalies.findings.filter((f) => f.line_id).map((f) => [f.line_id as string, f.reason]));
+    const lineContexts: DisputeLineContext[] = detail.lines.map((line) => ({ line, finding: findingByLineId.get(line.id) ?? null }));
+
+    const { text, method } = await draftDispute(detail.invoice, lineContexts, goodwillReason, this.env.DEEPSEEK_API_KEY);
+    await saveDisputeDraft(client, invoiceId, text);
+    return { invoice_id: invoiceId, draft: text, method, sent: false };
   }
 
   /**

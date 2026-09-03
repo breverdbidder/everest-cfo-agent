@@ -48,6 +48,19 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
     clearKey();
     throw new UnauthorizedError();
   }
-  if (!resp.ok) throw new Error(`${path} -> HTTP ${resp.status}`);
+  if (!resp.ok) throw new Error(`${path} -> HTTP ${resp.status} ${await resp.text().catch(() => "")}`);
+  return resp.json();
+}
+
+/** Issue #19810 -- invoice ingest supports either a raw file upload (PDF/text) or pasted text,
+ * so this posts FormData instead of JSON (no Content-Type header -- the browser sets the
+ * multipart boundary itself). */
+export async function apiPostForm<T>(path: string, form: FormData): Promise<T> {
+  const resp = await fetch(path, { method: "POST", headers: { "X-CFO-Secret": getKey() }, body: form });
+  if (resp.status === 401) {
+    clearKey();
+    throw new UnauthorizedError();
+  }
+  if (!resp.ok) throw new Error(`${path} -> HTTP ${resp.status} ${await resp.text().catch(() => "")}`);
   return resp.json();
 }

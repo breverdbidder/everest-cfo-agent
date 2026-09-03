@@ -24,4 +24,17 @@ not_found_handling = "404-page"
 #                                  the `Authorization` header — this is what actually scopes
 #                                  Postgres access via RLS. See worker/docs/PORTING_NOTES.md.
 #   CFO_AGENT_SHARED_SECRET      - single-user access gate (X-CFO-Secret header)
-#   DEEPSEEK_API_KEY             - optional, health-score reasoning text (falls back to static text if absent)
+#   DEEPSEEK_API_KEY             - optional. Health-score reasoning falls back to static text if
+#                                  absent (as before). Issue #19810 (invoice audit) ALSO uses
+#                                  this for LLM extraction/dispute-drafting when present, with a
+#                                  deterministic fallback (regex parser / template letter) when
+#                                  it isn't -- see worker/src/lib/invoiceExtract.ts and
+#                                  invoiceDispute.ts. Still not provisioned on this Worker as of
+#                                  2026-09-03 (open item carried from #19764).
+#
+# Issue #19810 (invoice audit) needs no new Worker secret for the Vercel usage-verification
+# adapter -- it reads the vendor credential from Supabase vault via the new, narrowly-gated
+# public.cfo_invoice_get_vendor_credential(name) RPC (allow-listed to
+# 'vercel_api_token_brevardbidderai' only), using the existing cfo_agent_ro JWT this Worker
+# already holds. That vault entry does not exist yet -- Ariel needs to create it once the
+# brevardbidderai@gmail.com Vercel account issues a scoped API token.

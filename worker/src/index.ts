@@ -5,9 +5,11 @@
 // auth.ts — entered once via the in-page gate form and kept in sessionStorage client-side.
 
 import { getAgentByName } from "agents";
+import { extractText, getDocumentProxy } from "unpdf";
 import { CfoAgent } from "./agent";
 import { isAuthorized } from "./auth";
 import type { Env } from "./lib/env";
+import { extractInvoice } from "./lib/invoiceExtract";
 
 export { CfoAgent };
 
@@ -32,6 +34,8 @@ export default {
       if (url.pathname === "/api/chat" && request.method === "POST") {
         return handleChat(request, env);
       }
+      const invoiceResponse = await handleInvoiceRoutes(request, url, env);
+      if (invoiceResponse) return invoiceResponse;
       return handleApi(url, env);
     }
 
@@ -128,6 +132,119 @@ async function handleApi(url: URL, env: Env): Promise<Response> {
   } catch (err) {
     return json({ error: "internal_error", message: (err as Error).message }, 500);
   }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Issue #19810 CFO v1 Issue M -- invoice audit routes. Handled separately from handleApi()'s
+// plain GET switch because ingest/verify/dispute need the request body and/or a path segment
+// (invoice id), neither of which handleApi's (url, env) signature carries. Returns null for any
+// path this module doesn't own, so the caller falls through to handleApi() (which 404s
+// GET /api/invoices/* itself if this function didn't already handle it -- it always does).
+// ---------------------------------------------------------------------------------------------
+
+const INVOICE_ID_ACTION_RE = /^\/api\/invoices\/([0-9a-f-]{36})\/(verify|dispute)$/;
+
+async function extractRequestText(request: Request): Promise<{ text: string; sourceFile: string | null }> {
+  const contentType = request.headers.get("content-type") ?? "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const form = await request.formData();
+    const file = form.get("file") as File | string | null;
+    if (file && typeof file !== "string") {
+      if (file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf") {
+        const buf = new Uint8Array(await file.arrayBuffer());
+        const pdf = await getDocumentProxy(buf);
+        const { text } = await extractText(pdf, { mergePages: true });
+        return { text, sourceFile: file.name };
+      }
+      return { text: await file.text(), sourceFile: file.name };
+    }
+    const pastedText = form.get("text");
+    if (typeof pastedText === "string" && pastedText.trim()) {
+      return { text: pastedText, sourceFile: null };
+    }
+    throw new Error("multipart body must include a 'file' field or a 'text' field");
+  }
+
+  if (contentType.includes("application/pdf")) {
+    const buf = new Uint8Array(await request.arrayBuffer());
+    const pdf = await getDocumentProxy(buf);
+    const { text } = await extractText(pdf, { mergePages: true });
+    return { text, sourceFile: "upload.pdf" };
+  }
+
+  if (contentType.includes("application/json")) {
+    const body = await request.json<{ text?: string; source_file?: string }>().catch(() => ({}) as { text?: string; source_file?: string });
+    if (!body.text || !body.text.trim()) throw new Error("JSON body must include non-empty 'text'");
+    return { text: body.text, sourceFile: body.source_file ?? null };
+  }
+
+  const text = await request.text();
+  if (!text.trim()) throw new Error("empty request body");
+  return { text, sourceFile: null };
+}
+
+async function handleInvoiceRoutes(request: Request, url: URL, env: Env): Promise<Response | null> {
+  const agent = await getAgentByName<Env, CfoAgent>(env.CFO_AGENT, "ariel-cfo");
+  const json = (data: unknown, status = 200) =>
+    new Response(JSON.stringify(data, null, 2), { status, headers: { "content-type": "application/json; charset=utf-8" } });
+
+  if (url.pathname === "/api/invoices" && request.method === "GET") {
+    try {
+      return json(await agent.listInvoices());
+    } catch (err) {
+      return json({ error: "internal_error", message: (err as Error).message }, 500);
+    }
+  }
+
+  if (url.pathname === "/api/invoices/ingest" && request.method === "POST") {
+    let text: string;
+    let sourceFile: string | null;
+    try {
+      ({ text, sourceFile } = await extractRequestText(request));
+    } catch (err) {
+      return json({ error: "bad_request", message: (err as Error).message }, 400);
+    }
+    const entityCode = url.searchParams.get("entity_code");
+    try {
+      const { extracted, method } = await extractInvoice(text, env.DEEPSEEK_API_KEY);
+      return json(
+        await agent.ingestInvoice(extracted, {
+          entityCode: entityCode || null,
+          sourceFile,
+          rawText: text,
+          extractionMethod: method,
+        }),
+      );
+    } catch (err) {
+      return json({ error: "extraction_or_ingest_failed", message: (err as Error).message }, 422);
+    }
+  }
+
+  const idMatch = url.pathname.match(/^\/api\/invoices\/([0-9a-f-]{36})$/);
+  if (idMatch && request.method === "GET") {
+    try {
+      return json(await agent.getInvoiceDetail(idMatch[1]));
+    } catch (err) {
+      return json({ error: "internal_error", message: (err as Error).message }, 500);
+    }
+  }
+
+  const actionMatch = url.pathname.match(INVOICE_ID_ACTION_RE);
+  if (actionMatch && request.method === "POST") {
+    const [, invoiceId, action] = actionMatch;
+    try {
+      if (action === "verify") {
+        return json(await agent.verifyInvoice(invoiceId));
+      }
+      const body = await request.json<{ goodwill_reason?: string }>().catch(() => ({}) as { goodwill_reason?: string });
+      return json(await agent.draftInvoiceDispute(invoiceId, body.goodwill_reason ?? null));
+    } catch (err) {
+      return json({ error: "internal_error", message: (err as Error).message }, 500);
+    }
+  }
+
+  return null;
 }
 
 async function handleChat(request: Request, env: Env): Promise<Response> {

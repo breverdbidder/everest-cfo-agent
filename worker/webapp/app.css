@@ -385,3 +385,74 @@ select:focus-visible {
   outline: 2px solid var(--amber);
   outline-offset: 2px;
 }
+
+/* ---------- Tabs (issue #19810) ---------- */
+.app-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 24px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--void);
+}
+.app-tabs button {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  padding: 8px 16px;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+}
+.app-tabs button[aria-selected="true"] {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+/* ---------- Invoices panel (issue #19810) ---------- */
+.invoice-ingest-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 640px;
+}
+.invoice-ingest-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.invoice-ingest-form textarea {
+  background: var(--void);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
+  padding: 8px;
+  resize: vertical;
+}
+.invoice-anomalies {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.invoice-anomalies ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.invoice-dispute-draft {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.invoice-dispute-draft pre {
+  white-space: pre-wrap;
+  background: var(--void);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px;
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
